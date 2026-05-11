@@ -5,7 +5,9 @@ import ParagraphBlock from './ParagraphBlock';
 export default function Editor() {
   const ref = useRef<HTMLDivElement>(null);
   const doc = useStore((s) => s.document);
-  const selection = useStore((s) => s.selection);
+  // Selection is NOT subscribed here — reading it would trigger re-renders
+  // on every selection change, destroying the browser's native DOM selection.
+  // Store functions read it via getState(); cursor restoration reads it below.
 
   const setSelection = useStore((s) => s.setSelection);
   const storeInsert = useStore((s) => s.insertText);
@@ -13,6 +15,10 @@ export default function Editor() {
   const storeHard = useStore((s) => s.hardDelete);
   const storeSplit = useStore((s) => s.splitParagraph);
   const storeComposeSet = useStore((s) => s.setIsComposing);
+  const storeToggleHide = useStore((s) => s.toggleHideDeleted);
+  const storeToggleBold = useStore((s) => s.toggleBold);
+  const storeToggleItalic = useStore((s) => s.toggleItalic);
+  const hideDeleted = useStore((s) => s.hideDeleted);
 
   const shiftRef = useRef(false);
 
@@ -22,6 +28,26 @@ export default function Editor() {
 
     const onKD = (e: KeyboardEvent) => {
       shiftRef.current = e.shiftKey;
+
+      const mod = e.metaKey || e.ctrlKey;
+
+      if (mod && !e.shiftKey && e.key === 'h') {
+        e.preventDefault();
+        storeToggleHide();
+        return;
+      }
+      if (mod && !e.shiftKey) {
+        if (e.key === 'b' || e.key === 'B') {
+          e.preventDefault();
+          storeToggleBold();
+          return;
+        }
+        if (e.key === 'i' || e.key === 'I') {
+          e.preventDefault();
+          storeToggleItalic();
+          return;
+        }
+      }
     };
 
     el.addEventListener('keydown', onKD, true);
@@ -73,42 +99,51 @@ export default function Editor() {
     return () => el.removeEventListener('beforeinput', onBeforeInput, true);
   }, []);
 
-  // Cursor restoration
+  // Cursor / selection restoration (only on document change, not on selection change)
   useEffect(() => {
-    if (!selection) return;
+    const sel = useStore.getState().selection;
+    if (!sel) return;
     const el = ref.current;
     if (!el) return;
-    const block = el.querySelector(`[data-pid="${selection.paragraphId}"]`);
+
+    // Cross-paragraph: leave the browser's native selection alone
+    const isMulti = sel.focusParagraphId && sel.focusParagraphId !== sel.paragraphId;
+    if (isMulti) return;
+
+    const block = el.querySelector(`[data-pid="${sel.paragraphId}"]`) as HTMLElement | null;
     if (!block) return;
 
-    const target = selection.focus;
-    let acc = 0;
-    for (const span of block.children) {
-      const len = Number((span as HTMLElement).dataset.len) || 0;
-      if (len === 0) {
-        if (target === acc) { placeAfter(span as HTMLElement); return; }
-        continue;
-      }
-      const end = acc + len;
-      if (target <= end) {
-        const tn = span.firstChild!;
-        const r = document.createRange();
-        r.setStart(tn, target - acc);
-        r.collapse(true);
-        applyRange(r);
-        return;
-      }
-      acc = end;
+    if (sel.anchor === sel.focus) {
+      const pos = findDOMPosition(block, sel.focus);
+      if (!pos) return;
+      const r = document.createRange();
+      r.setStart(pos.node, pos.offset);
+      r.collapse(true);
+      applyRange(r);
+      return;
     }
-    const last = block.lastElementChild;
-    if (last && last.tagName === 'BR') {
-      const r = document.createRange(); r.setStartBefore(last); r.collapse(true); applyRange(r);
-    } else if (last) {
-      placeAfter(last as HTMLElement);
-    } else {
-      const r = document.createRange(); r.setStart(block, 0); r.collapse(true); applyRange(r);
+
+    // Non-collapsed within same paragraph: restore with correct direction
+    const anchorPos = findDOMPosition(block, sel.anchor);
+    const focusPos = findDOMPosition(block, sel.focus);
+    if (!anchorPos || !focusPos) return;
+
+    window.getSelection()?.setBaseAndExtent(
+      anchorPos.node, anchorPos.offset,
+      focusPos.node, focusPos.offset,
+    );
+  }, [doc]);
+
+  function findParagraphBlock(node: Node): HTMLElement | null {
+    const el = ref.current;
+    if (!el) return null;
+    let cur: HTMLElement | null = node instanceof HTMLElement ? node : node.parentElement;
+    while (cur && cur !== el) {
+      if (cur.hasAttribute('data-pid')) return cur;
+      cur = cur.parentElement;
     }
-  });
+    return null;
+  }
 
   function syncSelection() {
     const domSel = window.getSelection();
@@ -116,23 +151,38 @@ export default function Editor() {
     const el = ref.current;
     if (!el) return;
     const aNode = domSel.anchorNode;
-    if (!aNode || !el.contains(aNode)) return;
+    const fNode = domSel.focusNode;
+    if (!aNode || !fNode || !el.contains(aNode) || !el.contains(fNode)) return;
 
-    let block: HTMLElement | null = aNode instanceof HTMLElement ? aNode : aNode.parentElement;
-    while (block && block !== el) {
-      if (block.hasAttribute('data-pid')) break;
-      block = block.parentElement;
-    }
-    if (!block || block === el) return;
+    const anchorBlock = findParagraphBlock(aNode);
+    const focusBlock = findParagraphBlock(fNode);
+    if (!anchorBlock || !focusBlock) return;
 
-    const pid = block.getAttribute('data-pid')!;
-    const anchor = getFlatOffset(block, domSel.anchorNode!, domSel.anchorOffset);
-    const focus = getFlatOffset(block, domSel.focusNode!, domSel.focusOffset);
+    const pid = anchorBlock.getAttribute('data-pid')!;
+    const fPid = focusBlock.getAttribute('data-pid')!;
+    const anchor = getFlatOffset(anchorBlock, aNode, domSel.anchorOffset);
+    const focus = getFlatOffset(focusBlock, fNode, domSel.focusOffset);
     if (anchor === null || focus === null) return;
-    setSelection({ paragraphId: pid, anchor, focus });
+
+    setSelection({
+      paragraphId: pid,
+      anchor,
+      focus,
+      focusParagraphId: fPid !== pid ? fPid : undefined,
+    });
   }
 
-  // Only sync on navigation keys (not content-modifying keys) to avoid overwriting store selection
+  // selectionchange keeps store in sync with DOM for ALL selection methods
+  // (Cmd+A, Shift+Click, drag, etc.), not just mouseUp/keyUp.
+  useEffect(() => {
+    const onSelChange = () => {
+      if (useStore.getState().isComposing) return;
+      syncSelection();
+    };
+    document.addEventListener('selectionchange', onSelChange);
+    return () => document.removeEventListener('selectionchange', onSelChange);
+  }, []);
+
   function handleKeyUp(e: React.KeyboardEvent) {
     if (/^(Arrow|Home|End|Page)/.test(e.key)) {
       syncSelection();
@@ -148,7 +198,7 @@ export default function Editor() {
   return (
     <div
       ref={ref}
-      className="editor"
+      className={`editor${hideDeleted ? ' hide-deleted' : ''}`}
       contentEditable
       suppressContentEditableWarning
       onCompositionStart={onCompositionStart}
@@ -183,11 +233,33 @@ function getFlatOffset(block: HTMLElement, node: Node, nodeOffset: number): numb
   }
   return null;
 }
-function placeAfter(el: HTMLElement) {
-  const r = document.createRange();
-  r.setStartAfter(el);
-  r.collapse(true);
-  applyRange(r);
+function findDOMPosition(block: HTMLElement, flatOffset: number): { node: Node; offset: number } | null {
+  let acc = 0;
+  for (const span of block.children) {
+    const len = Number((span as HTMLElement).dataset.len) || 0;
+    if (len === 0) {
+      if (flatOffset === acc) {
+        const parent = span.parentNode!;
+        const idx = Array.from(parent.childNodes).indexOf(span);
+        return { node: parent, offset: idx + 1 };
+      }
+      continue;
+    }
+    const end = acc + len;
+    if (flatOffset <= end) {
+      const tn = span.firstChild!;
+      return { node: tn, offset: flatOffset - acc };
+    }
+    acc = end;
+  }
+  // After all spans
+  const last = block.lastElementChild;
+  if (last) {
+    const parent = last.parentNode!;
+    const idx = Array.from(parent.childNodes).indexOf(last);
+    return { node: parent, offset: idx + 1 };
+  }
+  return { node: block, offset: 0 };
 }
 function applyRange(range: Range) {
   const sel = window.getSelection();

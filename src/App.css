@@ -46,3 +46,161 @@ body {
   font-size: 14px;
   margin: 0 1px;
 }
+
+/* ---- 一键清屏：隐藏软删除文字 ---- */
+.editor.hide-deleted .inline-text.deleted {
+  display: none;
+}
+.editor.hide-deleted .inline-soft-break {
+  display: none;
+}
+
+/* ---- 提示文字 ---- */
+.hint {
+  font-size: 13px;
+  color: #b0a89b;
+  margin-bottom: 24px;
+  line-height: 1.6;
+}
+.hint b { font-weight: 500; color: #8c8276; }
+
+/* ---- 浮动工具栏 ---- */
+.float-tb {
+  position: fixed;
+  transform: translate(-50%, -100%);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: #fffef9;
+  border: 1px solid #d4cec0;
+  border-radius: 6px;
+  padding: 4px 6px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+  z-index: 100;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+}
+.float-tb.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.tb-btn {
+  width: 28px;
+  height: 28px;
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #4a4238;
+  user-select: none;
+}
+.tb-btn:hover { background: #f0ede6; }
+.tb-btn.active { background: #e8e3da; border-color: #d4cec0; }
+
+.tb-sep {
+  width: 1px;
+  height: 18px;
+  background: #d4cec0;
+  margin: 0 4px;
+}
+
+/* 颜色选择器 */
+.tb-color-picker { position: relative; }
+.color-swatch {
+  display: block;
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  border: 1px solid #c5bdb2;
+}
+
+.color-dropdown, .font-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  background: #fffef9;
+  border: 1px solid #d4cec0;
+  border-radius: 6px;
+  padding: 10px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  z-index: 101;
+  min-width: 180px;
+}
+
+.color-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.color-chip {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  cursor: pointer;
+  border: 2px solid transparent;
+}
+.color-chip:hover { border-color: #b0a89b; }
+.color-chip.selected { border-color: #2c2c2c; }
+
+.color-custom-row, .font-custom-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+.color-custom-row input[type="color"] {
+  width: 24px;
+  height: 24px;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+.color-custom-label, .font-clear, .color-clear {
+  font-size: 12px;
+  color: #8c8276;
+}
+.color-clear, .font-clear {
+  background: none;
+  border: none;
+  cursor: pointer;
+  margin-top: 8px;
+  padding: 2px 0;
+  display: block;
+}
+.color-clear:hover, .font-clear:hover { color: #4a4238; }
+
+/* 字号选择器 */
+.tb-font-picker { position: relative; }
+
+.font-opt {
+  padding: 4px 10px;
+  cursor: pointer;
+  border-radius: 3px;
+}
+.font-opt:hover { background: #f0ede6; }
+.font-opt.selected { background: #e8e3da; }
+
+.font-custom-row input {
+  width: 80px;
+  padding: 3px 6px;
+  border: 1px solid #d4cec0;
+  border-radius: 3px;
+  font-size: 13px;
+}
+.font-custom-row button {
+  padding: 3px 8px;
+  border: 1px solid #d4cec0;
+  border-radius: 3px;
+  background: #f0ede6;
+  cursor: pointer;
+  font-size: 12px;
+}

@@ -1,6 +1,11 @@
 import { create } from 'zustand';
-import type { Paragraph, Document } from './types';
-import { normalizeParagraph, insertTextAt, mergeParagraphs } from './engine';
+import type { Paragraph, Document, AllowedStyles } from './types';
+import { normalizeParagraph, insertTextAt, formatRange, getFormatAt } from './engine';
+
+let _pidCounter = 0;
+function nextPid(): string {
+  return 'p' + Date.now() + '_' + (_pidCounter++);
+}
 
 // ---- helpers ----
 
@@ -12,7 +17,6 @@ function flatLength(p: Paragraph): number {
   return len;
 }
 
-/** 将段落中 [from, to) 范围内的字符标记为 deleted */
 function softDeleteRange(para: Paragraph, from: number, to: number): Paragraph {
   if (from >= to) return para;
 
@@ -28,21 +32,17 @@ function softDeleteRange(para: Paragraph, from: number, to: number): Paragraph {
     const spanLen = child.insert.length;
     const spanEnd = pos + spanLen;
 
-    // 该 span 在删除范围之前 → 不动
     if (spanEnd <= from) {
       result.push(child);
       pos = spanEnd;
       continue;
     }
-
-    // 该 span 在删除范围之后 → 不动
     if (pos >= to) {
       result.push(child);
       pos = spanEnd;
       continue;
     }
 
-    // span 与删除范围有交集 → 需要分片
     const delStart = Math.max(from, pos);
     const delEnd = Math.min(to, spanEnd);
 
@@ -52,15 +52,9 @@ function softDeleteRange(para: Paragraph, from: number, to: number): Paragraph {
 
     const attrs = child.attributes;
 
-    if (before) {
-      result.push({ ...child, insert: before });
-    }
-    if (inside) {
-      result.push({ type: 'text', insert: inside, status: 'deleted', attributes: attrs });
-    }
-    if (after) {
-      result.push({ ...child, insert: after });
-    }
+    if (before) result.push({ ...child, insert: before });
+    if (inside) result.push({ type: 'text', insert: inside, status: 'deleted', attributes: attrs });
+    if (after) result.push({ ...child, insert: after });
 
     pos = spanEnd;
   }
@@ -68,7 +62,37 @@ function softDeleteRange(para: Paragraph, from: number, to: number): Paragraph {
   return normalizeParagraph({ ...para, children: result });
 }
 
-/** 真删除 offset 位置的 1 个字符（仅在 collapsed cursor 时调用） */
+/** 真删除 [from, to) 范围的字符 */
+function hardDeleteRange(para: Paragraph, from: number, to: number): Paragraph {
+  if (from >= to) return para;
+  const result: Paragraph['children'] = [];
+  let pos = 0;
+
+  for (const child of para.children) {
+    if (child.type === 'soft-break') {
+      result.push(child);
+      continue;
+    }
+
+    const spanLen = child.insert.length;
+    const spanEnd = pos + spanLen;
+
+    if (spanEnd <= from || pos >= to) {
+      result.push(child);
+    } else {
+      const keepStart = Math.max(from, pos);
+      const keepEnd = Math.min(to, spanEnd);
+      const before = child.insert.slice(0, keepStart - pos);
+      const after = child.insert.slice(keepEnd - pos);
+      if (before) result.push({ ...child, insert: before });
+      if (after) result.push({ ...child, insert: after });
+    }
+    pos = spanEnd;
+  }
+
+  return normalizeParagraph({ ...para, children: result });
+}
+
 function hardDeleteChar(para: Paragraph, offset: number): Paragraph {
   const result: Paragraph['children'] = [];
   let pos = 0;
@@ -79,32 +103,22 @@ function hardDeleteChar(para: Paragraph, offset: number): Paragraph {
       result.push(child);
       continue;
     }
-
     if (removed) {
       result.push(child);
       continue;
     }
-
     const spanLen = child.insert.length;
     const spanEnd = pos + spanLen;
-
     if (offset < pos || offset >= spanEnd) {
       result.push(child);
       pos = spanEnd;
       continue;
     }
-
-    // offset 在这个 span 里
     const idx = offset - pos;
     const left = child.insert.slice(0, idx);
     const right = child.insert.slice(idx + 1);
-
-    if (left || right) {
-      if (left) result.push({ ...child, insert: left });
-      if (right) result.push({ ...child, insert: right });
-    }
-    // 如果 left 和 right 都为空，这个 span 被删光了，就不 push
-
+    if (left) result.push({ ...child, insert: left });
+    if (right) result.push({ ...child, insert: right });
     removed = true;
     pos = spanEnd;
   }
@@ -112,23 +126,102 @@ function hardDeleteChar(para: Paragraph, offset: number): Paragraph {
   return normalizeParagraph({ ...para, children: result });
 }
 
-// ---- selection helpers ----
+// ---- selection ----
 
 interface EditorSelection {
   paragraphId: string;
   anchor: number;
   focus: number;
+  focusParagraphId?: string; // set when focus is in a different paragraph
 }
 
 function isCollapsed(sel: EditorSelection): boolean {
-  return sel.anchor === sel.focus;
+  return sel.anchor === sel.focus && (!sel.focusParagraphId || sel.focusParagraphId === sel.paragraphId);
 }
 
-function ordered(sel: EditorSelection): { from: number; to: number } {
-  return {
-    from: Math.min(sel.anchor, sel.focus),
-    to: Math.max(sel.anchor, sel.focus),
-  };
+interface MultiRange {
+  startPid: string;
+  startOffset: number;
+  endPid: string;
+  endOffset: number;
+}
+
+/** Convert selection to ordered multi-paragraph range */
+function getMultiRange(doc: Document, sel: EditorSelection): MultiRange | null {
+  const aPid = sel.paragraphId;
+  const fPid = sel.focusParagraphId || sel.paragraphId;
+  const aIdx = doc.paragraphs.findIndex((p) => p.id === aPid);
+  const fIdx = doc.paragraphs.findIndex((p) => p.id === fPid);
+  if (aIdx === -1 || fIdx === -1) return null;
+
+  if (aIdx <= fIdx) {
+    return { startPid: aPid, startOffset: sel.anchor, endPid: fPid, endOffset: sel.focus };
+  } else {
+    return { startPid: fPid, startOffset: sel.focus, endPid: aPid, endOffset: sel.anchor };
+  }
+}
+
+/** Apply or toggle formatting on a selection range within the document.
+ *  For a boolean key where value is undefined, it toggles. */
+function applyFormatToSelection(doc: Document, sel: EditorSelection, attrs: Partial<AllowedStyles>) {
+  const range = getMultiRange(doc, sel);
+  if (!range) return;
+
+  const paras = doc.paragraphs;
+  const sIdx = paras.findIndex((p) => p.id === range.startPid);
+  const eIdx = paras.findIndex((p) => p.id === range.endPid);
+  if (sIdx === -1 || eIdx === -1) return;
+
+  // Only toggle boolean keys that are EXPLICITLY in attrs (from toggleBold/toggleItalic)
+  let resolved = { ...attrs };
+  for (const key of ['bold', 'italic'] as const) {
+    if (key in attrs && attrs[key] === undefined) {
+      let hasAll = true;
+      let foundAny = false;
+      for (let i = sIdx; i <= eIdx && hasAll; i++) {
+        const p = paras[i];
+        const f = i === sIdx ? range.startOffset : 0;
+        const t = i === eIdx ? range.endOffset : flatLength(p);
+        hasAll = rangeHasFormat(p, f, t, key);
+        if (f < t) foundAny = true;
+      }
+      if (foundAny) {
+        resolved = { ...resolved, [key]: hasAll ? false : true };
+      }
+    }
+  }
+
+  // Keep false/undefined values — formatRange uses them to remove keys
+  const finalAttrs: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(resolved)) {
+    if (v === false || v === undefined) finalAttrs[k] = false; // false = "remove this key"
+    else finalAttrs[k] = v;
+  }
+
+  const newParas = [...paras];
+  for (let i = sIdx; i <= eIdx; i++) {
+    const f = i === sIdx ? range.startOffset : 0;
+    const t = i === eIdx ? range.endOffset : flatLength(newParas[i]);
+    if (f >= t) continue;
+    newParas[i] = formatRange(newParas[i], f, t, finalAttrs as Partial<AllowedStyles>);
+  }
+
+  useStore.setState((s) => ({
+    document: { ...s.document, paragraphs: newParas },
+  }));
+}
+
+function rangeHasFormat(para: Paragraph, from: number, to: number, key: 'bold' | 'italic'): boolean {
+  let pos = 0;
+  for (const child of para.children) {
+    if (child.type === 'soft-break') continue;
+    const spanLen = child.insert.length;
+    const spanEnd = pos + spanLen;
+    if (spanEnd <= from || pos >= to) { pos = spanEnd; continue; }
+    if (!child.attributes?.[key]) return false;
+    pos = spanEnd;
+  }
+  return true;
 }
 
 // ---- store ----
@@ -137,9 +230,16 @@ interface EditorState {
   document: Document;
   selection: EditorSelection | null;
   isComposing: boolean;
+  hideDeleted: boolean;
+  activeFormats: AllowedStyles;
 
   setSelection: (sel: EditorSelection | null) => void;
   setIsComposing: (v: boolean) => void;
+  toggleHideDeleted: () => void;
+  toggleBold: () => void;
+  toggleItalic: () => void;
+  setColor: (color: string | undefined) => void;
+  setFontSize: (size: string | undefined) => void;
 
   insertText: (text: string) => void;
   softDelete: (direction: 'backward' | 'forward') => void;
@@ -152,25 +252,80 @@ export const useStore = create<EditorState>((set, get) => ({
   document: { chapterId: 'ch1', paragraphs: [{ id: 'p1', children: [] }] },
   selection: null,
   isComposing: false,
+  hideDeleted: false,
+  activeFormats: {},
 
-  setSelection: (sel) => set({ selection: sel }),
+  setSelection: (sel) => {
+    // Update activeFormats based on cursor position
+    if (sel) {
+      const para = get().document.paragraphs.find((p) => p.id === sel.paragraphId);
+      if (para) {
+        const fmt = getFormatAt(para, sel.anchor);
+        set({ selection: sel, activeFormats: fmt });
+        return;
+      }
+    }
+    set({ selection: sel });
+  },
   setIsComposing: (v) => set({ isComposing: v }),
+  toggleHideDeleted: () => set((s) => ({ hideDeleted: !s.hideDeleted })),
+
+  toggleBold: () => {
+    const { document, selection, activeFormats } = get();
+    if (!selection) return;
+    if (!isCollapsed(selection)) {
+      applyFormatToSelection(document, selection, { bold: undefined }); // toggle logic inside
+      return;
+    }
+    set({ activeFormats: { ...activeFormats, bold: !activeFormats.bold } });
+  },
+  toggleItalic: () => {
+    const { document, selection, activeFormats } = get();
+    if (!selection) return;
+    if (!isCollapsed(selection)) {
+      applyFormatToSelection(document, selection, { italic: undefined }); // toggle logic inside
+      return;
+    }
+    set({ activeFormats: { ...activeFormats, italic: !activeFormats.italic } });
+  },
+  setColor: (color) => {
+    const { document, selection, activeFormats } = get();
+    if (!selection) return;
+    if (!isCollapsed(selection)) {
+      applyFormatToSelection(document, selection, { color: color ?? undefined });
+      return;
+    }
+    set({ activeFormats: { ...activeFormats, color } });
+  },
+  setFontSize: (size) => {
+    const { document, selection, activeFormats } = get();
+    if (!selection) return;
+    if (!isCollapsed(selection)) {
+      applyFormatToSelection(document, selection, { fontSize: size ?? undefined });
+      return;
+    }
+    set({ activeFormats: { ...activeFormats, fontSize: size } });
+  },
 
   insertText: (text) => {
     const { document, selection } = get();
     if (!selection) return;
 
-    let paraId = selection.paragraphId;
-    let anchor = selection.anchor;
+    const paraId = selection.paragraphId;
+    const anchor = selection.anchor;
 
-    // 有选区 → 先软删选区，在删除位置插入新文本 (PRD 2.3)
     if (!isCollapsed(selection)) {
+      const range = getMultiRange(document, selection);
+      if (!range) return;
+      // For now, only handle single-paragraph range replacement
+      if (range.startPid !== range.endPid) return;
       const idx = document.paragraphs.findIndex((p) => p.id === paraId);
       if (idx === -1) return;
       const para = document.paragraphs[idx];
-      const { from } = ordered(selection);
-      const afterSoftDel = softDeleteRange(para, from, Math.max(selection.anchor, selection.focus));
-      const afterInsert = insertTextAt(afterSoftDel, from, text);
+      const from = Math.min(range.startOffset, range.endOffset);
+      const to = Math.max(range.startOffset, range.endOffset);
+      const afterSoftDel = softDeleteRange(para, from, to);
+      const afterInsert = insertTextAt(afterSoftDel, from, text, get().activeFormats);
       set((s) => ({
         document: { ...s.document, paragraphs: s.document.paragraphs.map((p) => (p.id === paraId ? afterInsert : p)) },
         selection: { paragraphId: paraId, anchor: from + text.length, focus: from + text.length },
@@ -182,7 +337,7 @@ export const useStore = create<EditorState>((set, get) => ({
       document: {
         ...s.document,
         paragraphs: s.document.paragraphs.map((p) =>
-          p.id === paraId ? insertTextAt(p, anchor, text) : p,
+          p.id === paraId ? insertTextAt(p, anchor, text, s.activeFormats) : p,
         ),
       },
       selection: { paragraphId: paraId, anchor: anchor + text.length, focus: anchor + text.length },
@@ -194,22 +349,51 @@ export const useStore = create<EditorState>((set, get) => ({
     if (!selection || isComposing) return;
 
     const paras = document.paragraphs;
-    const idx = paras.findIndex((p) => p.id === selection.paragraphId);
-    if (idx === -1) return;
-    const para = paras[idx];
 
+    // Handle non-collapsed (range) selection
     if (!isCollapsed(selection)) {
-      // 有选区 → 软删选区
-      const { from, to } = ordered(selection);
-      const updated = softDeleteRange(para, from, to);
+      const range = getMultiRange(document, selection);
+      if (!range) return;
+
+      const sIdx = paras.findIndex((p) => p.id === range.startPid);
+      const eIdx = paras.findIndex((p) => p.id === range.endPid);
+      if (sIdx === -1 || eIdx === -1) return;
+
+      const newParas = [...paras];
+
+      if (sIdx === eIdx) {
+        // Single paragraph range
+        const from = Math.min(range.startOffset, range.endOffset);
+        const to = Math.max(range.startOffset, range.endOffset);
+        if (from >= to) return;
+        const updated = softDeleteRange(paras[sIdx], from, to);
+        newParas[sIdx] = updated;
+        set((s) => ({
+          document: { ...s.document, paragraphs: newParas },
+          selection: { paragraphId: updated.id, anchor: from, focus: from },
+        }));
+        return;
+      }
+
+      // Multi-paragraph soft delete: keep paragraphs separate, only mark text as deleted
+      const firstLen = flatLength(paras[sIdx]);
+      newParas[sIdx] = softDeleteRange(paras[sIdx], range.startOffset, firstLen);
+      for (let i = sIdx + 1; i < eIdx; i++) {
+        newParas[i] = softDeleteRange(paras[i], 0, flatLength(paras[i]));
+      }
+      newParas[eIdx] = softDeleteRange(paras[eIdx], 0, range.endOffset);
+
       set((s) => ({
-        document: { ...s.document, paragraphs: s.document.paragraphs.map((p) => (p.id === para.id ? updated : p)) },
-        selection: { paragraphId: para.id, anchor: from, focus: from },
+        document: { ...s.document, paragraphs: newParas },
+        selection: { paragraphId: range.startPid, anchor: range.startOffset, focus: range.startOffset },
       }));
       return;
     }
 
-    // 折叠光标
+    // Collapsed cursor
+    const idx = paras.findIndex((p) => p.id === selection.paragraphId);
+    if (idx === -1) return;
+    const para = paras[idx];
     const pos = selection.anchor;
 
     if (direction === 'backward') {
@@ -220,10 +404,9 @@ export const useStore = create<EditorState>((set, get) => ({
           selection: { paragraphId: para.id, anchor: pos - 1, focus: pos - 1 },
         }));
       } else if (idx > 0) {
-        // 段落开头 → 合并到上一段
         const prev = paras[idx - 1];
         const prevLen = flatLength(prev);
-        const merged = mergeParagraphs(prev, para);
+        const merged = normalizeParagraph({ id: prev.id, children: [...prev.children, ...para.children] });
         const newParas = [...paras];
         newParas.splice(idx - 1, 2, merged);
         set((s) => ({
@@ -232,7 +415,6 @@ export const useStore = create<EditorState>((set, get) => ({
         }));
       }
     } else {
-      // forward (Delete)
       const len = flatLength(para);
       if (pos < len) {
         const updated = softDeleteRange(para, pos, pos + 1);
@@ -241,9 +423,8 @@ export const useStore = create<EditorState>((set, get) => ({
           selection: { paragraphId: para.id, anchor: pos, focus: pos },
         }));
       } else if (idx < paras.length - 1) {
-        // 段尾 → 合并下一段
         const next = paras[idx + 1];
-        const merged = mergeParagraphs(para, next);
+        const merged = normalizeParagraph({ id: para.id, children: [...para.children, ...next.children] });
         const newParas = [...paras];
         newParas.splice(idx, 2, merged);
         set((s) => ({
@@ -258,13 +439,48 @@ export const useStore = create<EditorState>((set, get) => ({
     const { document, selection, isComposing } = get();
     if (!selection || isComposing) return;
 
-    // 安全锁：有选区时降级为软删除
+    const paras = document.paragraphs;
+
+    // Handle non-collapsed (range) selection
     if (!isCollapsed(selection)) {
-      get().softDelete('backward');
+      const range = getMultiRange(document, selection);
+      if (!range) return;
+
+      const sIdx = paras.findIndex((p) => p.id === range.startPid);
+      const eIdx = paras.findIndex((p) => p.id === range.endPid);
+      if (sIdx === -1 || eIdx === -1) return;
+
+      const newParas = [...paras];
+
+      if (sIdx === eIdx) {
+        // Single paragraph range
+        const from = Math.min(range.startOffset, range.endOffset);
+        const to = Math.max(range.startOffset, range.endOffset);
+        if (from >= to) return;
+        const updated = hardDeleteRange(paras[sIdx], from, to);
+        newParas[sIdx] = updated;
+        set((s) => ({
+          document: { ...s.document, paragraphs: newParas },
+          selection: { paragraphId: updated.id, anchor: from, focus: from },
+        }));
+        return;
+      }
+
+      // Multi-paragraph: hard-delete from startOffset to end of first
+      const first = hardDeleteRange(paras[sIdx], range.startOffset, flatLength(paras[sIdx]));
+      // Hard-delete from 0 to endOffset in last (intermediate paragraphs are fully removed)
+      const last = hardDeleteRange(paras[eIdx], 0, range.endOffset);
+      const merged = normalizeParagraph({ id: first.id, children: [...first.children, ...last.children] });
+
+      newParas.splice(sIdx, eIdx - sIdx + 1, merged);
+      set((s) => ({
+        document: { ...s.document, paragraphs: newParas },
+        selection: { paragraphId: merged.id, anchor: range.startOffset, focus: range.startOffset },
+      }));
       return;
     }
 
-    const paras = document.paragraphs;
+    // Collapsed cursor
     const idx = paras.findIndex((p) => p.id === selection.paragraphId);
     if (idx === -1) return;
     const para = paras[idx];
@@ -277,19 +493,14 @@ export const useStore = create<EditorState>((set, get) => ({
         selection: { paragraphId: para.id, anchor: pos - 1, focus: pos - 1 },
       }));
     } else if (idx > 0) {
-      // 段落开头 → 硬合并（不带 soft-break）
       const prev = paras[idx - 1];
       const prevLen = flatLength(prev);
-      const hardMerged: Paragraph = {
-        id: prev.id,
-        children: [...prev.children, ...para.children],
-      };
-      const normalized = normalizeParagraph(hardMerged);
+      const merged = normalizeParagraph({ id: prev.id, children: [...prev.children, ...para.children] });
       const newParas = [...paras];
-      newParas.splice(idx - 1, 2, normalized);
+      newParas.splice(idx - 1, 2, merged);
       set((s) => ({
         document: { ...s.document, paragraphs: newParas },
-        selection: { paragraphId: normalized.id, anchor: prevLen, focus: prevLen },
+        selection: { paragraphId: merged.id, anchor: prevLen, focus: prevLen },
       }));
     }
   },
@@ -304,7 +515,6 @@ export const useStore = create<EditorState>((set, get) => ({
     const para = paras[idx];
     const pos = selection.anchor;
 
-    // 从 offset 处切开段落
     const leftChildren: Paragraph['children'] = [];
     const rightChildren: Paragraph['children'] = [];
     let accumulated = 0;
@@ -328,7 +538,6 @@ export const useStore = create<EditorState>((set, get) => ({
       } else if (split && pos <= accumulated) {
         rightChildren.push(child);
       } else {
-        // pos 在这个 span 内部 → 切开
         const cutAt = pos - accumulated;
         const leftText = child.insert.slice(0, cutAt);
         const rightText = child.insert.slice(cutAt);
@@ -341,7 +550,7 @@ export const useStore = create<EditorState>((set, get) => ({
       accumulated = spanEnd;
     }
 
-    const newId = 'p' + Date.now();
+    const newId = nextPid();
     const newParas = [...paras];
     newParas.splice(idx, 1,
       normalizeParagraph({ ...para, id: para.id, children: leftChildren }),
