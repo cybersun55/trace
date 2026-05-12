@@ -152,3 +152,37 @@ function downloadBlob(blob: Blob, filename: string) {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
+
+// ---- recent files ----
+
+const RECENT_KEY = 'trace_recent';
+
+export interface RecentEntry {
+  name: string;
+  time: string; // ISO
+}
+
+export function getRecentFiles(): RecentEntry[] {
+  try {
+    const raw = localStorage.getItem(RECENT_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function addRecentFile(name: string): void {
+  const list = getRecentFiles().filter((e) => e.name !== name);
+  list.unshift({ name, time: new Date().toISOString() });
+  if (list.length > 10) list.length = 10;
+  try {
+    localStorage.setItem(RECENT_KEY, JSON.stringify(list));
+  } catch {}
+}
+
+// ---- text file download ----
+
+export function downloadText(filename: string, text: string): void {
+  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+  downloadBlob(blob, filename);
+}

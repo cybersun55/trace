@@ -74,6 +74,57 @@ body {
 }
 .app-btn:hover { background: #f0ede6; }
 
+.app-dropdown { position: relative; }
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  background: #fffef9;
+  border: 1px solid #d4cec0;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  z-index: 200;
+  min-width: 180px;
+  padding: 4px;
+}
+
+.dropdown-item {
+  display: block;
+  width: 100%;
+  padding: 6px 12px;
+  border: none;
+  background: none;
+  font-size: 13px;
+  color: #4a4238;
+  cursor: pointer;
+  text-align: left;
+  border-radius: 3px;
+  font-family: inherit;
+}
+.dropdown-item:hover { background: #f0ede6; }
+
+.recent-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: default;
+}
+.recent-item:hover { background: transparent; }
+.recent-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 140px;
+}
+.recent-time {
+  font-size: 11px;
+  color: #b0a89b;
+  flex-shrink: 0;
+  margin-left: 12px;
+}
+
 /* ---- 提示文字 ---- */
 .hint {
   font-size: 13px;
