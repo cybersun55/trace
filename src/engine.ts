@@ -171,7 +171,7 @@ export function getFormatAt(para: Paragraph, offset: number): AllowedStyles {
 // ---- helpers ----
 
 function span(insert: string, status: 'normal' | 'deleted' = 'normal', attrs?: AllowedStyles): TextSpan {
-  return { type: 'text', insert, status, attributes: attrs };
+  return { type: 'text', insert, status, attributes: cleanAttrs(attrs) };
 }
 
 function sameAttrs(a: TextSpan['attributes'], b: TextSpan['attributes']): boolean {

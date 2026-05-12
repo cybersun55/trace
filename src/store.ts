@@ -274,19 +274,23 @@ export const useStore = create<EditorState>((set, get) => ({
     const { document, selection, activeFormats } = get();
     if (!selection) return;
     if (!isCollapsed(selection)) {
-      applyFormatToSelection(document, selection, { bold: undefined }); // toggle logic inside
+      applyFormatToSelection(document, selection, { bold: undefined });
       return;
     }
-    set({ activeFormats: { ...activeFormats, bold: !activeFormats.bold } });
+    const next = { ...activeFormats };
+    if (activeFormats.bold) delete next.bold; else next.bold = true;
+    set({ activeFormats: next });
   },
   toggleItalic: () => {
     const { document, selection, activeFormats } = get();
     if (!selection) return;
     if (!isCollapsed(selection)) {
-      applyFormatToSelection(document, selection, { italic: undefined }); // toggle logic inside
+      applyFormatToSelection(document, selection, { italic: undefined });
       return;
     }
-    set({ activeFormats: { ...activeFormats, italic: !activeFormats.italic } });
+    const next = { ...activeFormats };
+    if (activeFormats.italic) delete next.italic; else next.italic = true;
+    set({ activeFormats: next });
   },
   setColor: (color) => {
     const { document, selection, activeFormats } = get();
@@ -295,7 +299,9 @@ export const useStore = create<EditorState>((set, get) => ({
       applyFormatToSelection(document, selection, { color: color ?? undefined });
       return;
     }
-    set({ activeFormats: { ...activeFormats, color } });
+    const next = { ...activeFormats };
+    if (color) next.color = color; else delete next.color;
+    set({ activeFormats: next });
   },
   setFontSize: (size) => {
     const { document, selection, activeFormats } = get();
@@ -304,7 +310,9 @@ export const useStore = create<EditorState>((set, get) => ({
       applyFormatToSelection(document, selection, { fontSize: size ?? undefined });
       return;
     }
-    set({ activeFormats: { ...activeFormats, fontSize: size } });
+    const next = { ...activeFormats };
+    if (size) next.fontSize = size; else delete next.fontSize;
+    set({ activeFormats: next });
   },
 
   insertText: (text) => {
