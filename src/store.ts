@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { Paragraph, Document, AllowedStyles } from './types';
 import { normalizeParagraph, insertTextAt, formatRange, getFormatAt } from './engine';
+import { autoLoad } from './storage';
 
 let _pidCounter = 0;
 function nextPid(): string {
@@ -257,7 +258,7 @@ interface EditorState {
 }
 
 export const useStore = create<EditorState>((set, get) => ({
-  document: { chapterId: 'ch1', paragraphs: [{ id: 'p1', children: [] }] },
+  document: autoLoad() || { chapterId: 'ch1', paragraphs: [{ id: 'p1', children: [] }] },
   selection: null,
   isComposing: false,
   hideDeleted: false,
