@@ -10,7 +10,7 @@ export default function App() {
         推敲 Trace
       </h1>
       <div className="hint">
-        Backspace <b>删除留痕</b> | Shift+Backspace <b>真删除</b> | Enter 换段 | Cmd+B/I 格式 | Cmd+H 清屏
+        Backspace <b>删除留痕</b> | Shift+Backspace <b>真删除</b> | Enter 换段 | Cmd+B/I 格式 | Tab 清屏
       </div>
       <Editor />
     </div>

@@ -31,11 +31,13 @@ export default function Editor() {
 
       const mod = e.metaKey || e.ctrlKey;
 
-      if (mod && !e.shiftKey && e.key === 'h') {
+      // Tab 切换清屏
+      if (e.key === 'Tab') {
         e.preventDefault();
         storeToggleHide();
         return;
       }
+
       if (mod && !e.shiftKey) {
         if (e.key === 'b' || e.key === 'B') {
           e.preventDefault();
