@@ -154,10 +154,18 @@ function getMultiRange(doc: Document, sel: EditorSelection): MultiRange | null {
   const fIdx = doc.paragraphs.findIndex((p) => p.id === fPid);
   if (aIdx === -1 || fIdx === -1) return null;
 
-  if (aIdx <= fIdx) {
+  if (aIdx < fIdx) {
     return { startPid: aPid, startOffset: sel.anchor, endPid: fPid, endOffset: sel.focus };
-  } else {
+  } else if (aIdx > fIdx) {
     return { startPid: fPid, startOffset: sel.focus, endPid: aPid, endOffset: sel.anchor };
+  } else {
+    // Same paragraph: normalize offsets so startOffset <= endOffset
+    return {
+      startPid: aPid,
+      startOffset: Math.min(sel.anchor, sel.focus),
+      endPid: fPid,
+      endOffset: Math.max(sel.anchor, sel.focus),
+    };
   }
 }
 
