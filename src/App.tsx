@@ -18,7 +18,13 @@ export default function App() {
     await exportTracebook(doc);
   };
 
-  const handleOpen = () => {
+  const handleOpen = async () => {
+    // Try native open dialog first; fall back to hidden file input
+    if ('showOpenFilePicker' in window) {
+      const imported = await importTracebook();
+      if (imported) loadDocument(imported);
+      return;
+    }
     fileRef.current?.click();
   };
 

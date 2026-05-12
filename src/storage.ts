@@ -45,16 +45,15 @@ function countWords(doc: Document): number {
   for (const p of doc.paragraphs) {
     for (const c of p.children) {
       if (c.type === 'text' && c.status === 'normal') {
-        total += [...c.insert].length; // Chinese chars + words
+        total += [...c.insert].length;
       }
     }
   }
   return total;
 }
 
-export async function exportTracebook(doc: Document): Promise<void> {
+async function buildZip(doc: Document): Promise<Blob> {
   const zip = new JSZip();
-
   const now = new Date().toISOString();
 
   const meta: TracebookMeta = {
@@ -74,11 +73,59 @@ export async function exportTracebook(doc: Document): Promise<void> {
   zip.file('toc.json', JSON.stringify(toc, null, 2));
   zip.file('chapters/ch_001.json', JSON.stringify(doc, null, 2));
 
-  const blob = await zip.generateAsync({ type: 'blob' });
-  downloadBlob(blob, '写作.tracebook');
+  return zip.generateAsync({ type: 'blob' });
 }
 
-export async function importTracebook(file: File): Promise<Document | null> {
+export async function exportTracebook(doc: Document): Promise<void> {
+  const blob = await buildZip(doc);
+
+  // Prefer native save dialog (Chromium) — user picks folder + name
+  if ('showSaveFilePicker' in window) {
+    try {
+      const handle = await (window as any).showSaveFilePicker({
+        suggestedName: '写作.tracebook',
+        types: [{
+          description: 'Tracebook 文档',
+          accept: { 'application/zip': ['.tracebook'] },
+        }],
+      });
+      const writable = await handle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      return;
+    } catch (err: any) {
+      // User cancelled the dialog
+      if (err?.name === 'AbortError') return;
+      // Otherwise fall through to download fallback
+    }
+  }
+
+  // Fallback: prompt for filename, then download
+  const filename = prompt('保存文件名：', '写作.tracebook');
+  if (!filename) return;
+  const finalName = filename.endsWith('.tracebook') ? filename : filename + '.tracebook';
+  downloadBlob(blob, finalName);
+}
+
+export async function importTracebook(file?: File): Promise<Document | null> {
+  // Prefer native open dialog
+  if (!file && 'showOpenFilePicker' in window) {
+    try {
+      const [handle] = await (window as any).showOpenFilePicker({
+        types: [{
+          description: 'Tracebook 文档',
+          accept: { 'application/zip': ['.tracebook'] },
+        }],
+        multiple: false,
+      });
+      file = await handle.getFile();
+    } catch {
+      return null; // user cancelled
+    }
+  }
+
+  if (!file) return null;
+
   try {
     const zip = await JSZip.loadAsync(file);
     const docFile = zip.file('chapters/ch_001.json');
@@ -87,7 +134,6 @@ export async function importTracebook(file: File): Promise<Document | null> {
     const text = await docFile.async('text');
     const doc = JSON.parse(text) as Document;
 
-    // Basic validation
     if (!doc.chapterId || !Array.isArray(doc.paragraphs)) return null;
 
     return doc;
