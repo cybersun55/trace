@@ -4,26 +4,15 @@ import { useStore } from './store';
 const PRESET_COLORS = ['#2c2c2c', '#e74c3c', '#e67e22', '#f1c40f', '#2ecc71', '#3498db', '#9b59b6', '#b0a89b'];
 const FONT_SIZES = ['small', 'medium', 'large'];
 
-function refocusEditor() {
-  const el = document.querySelector('.editor') as HTMLElement | null;
-  el?.focus();
-}
-
 export default function Toolbar() {
   const toggleBold = useStore((s) => s.toggleBold);
   const toggleItalic = useStore((s) => s.toggleItalic);
   const setColor = useStore((s) => s.setColor);
   const setFontSize = useStore((s) => s.setFontSize);
   const selection = useStore((s) => s.selection);
-
-  const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
-
   const activeFormats = useStore((s) => s.activeFormats);
 
-  const handleBold = () => { toggleBold(); refocusEditor(); };
-  const handleItalic = () => { toggleItalic(); refocusEditor(); };
-  const handleColor = (c: string | undefined) => { setColor(c); refocusEditor(); };
-  const handleFontSize = (s: string | undefined) => { setFontSize(s); refocusEditor(); };
+  const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
     const onSelChange = () => {
@@ -50,22 +39,23 @@ export default function Toolbar() {
     <div
       className={`float-tb${visible ? ' visible' : ''}`}
       style={pos ? { left: pos.x, top: pos.y } : { display: 'none' }}
+      contentEditable={false}
     >
       <button
         className={`tb-btn${activeFormats.bold ? ' active' : ''}`}
-        onMouseDown={(e) => { e.preventDefault(); handleBold(); }}
+        onMouseDown={(e) => { e.preventDefault(); toggleBold(); }}
         title="粗体 (⌘B)"
       ><b>B</b></button>
       <button
         className={`tb-btn${activeFormats.italic ? ' active' : ''}`}
-        onMouseDown={(e) => { e.preventDefault(); handleItalic(); }}
+        onMouseDown={(e) => { e.preventDefault(); toggleItalic(); }}
         title="斜体 (⌘I)"
       ><i>I</i></button>
 
       <span className="tb-sep" />
 
-      <ColorPicker current={activeFormats.color} onSelect={handleColor} />
-      <FontSizePicker current={activeFormats.fontSize} onSelect={handleFontSize} />
+      <ColorPicker current={activeFormats.color} onSelect={setColor} />
+      <FontSizePicker current={activeFormats.fontSize} onSelect={setFontSize} />
     </div>
   );
 }

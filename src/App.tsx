@@ -1,11 +1,9 @@
 import Editor from './Editor';
-import Toolbar from './Toolbar';
 import './App.css';
 
 export default function App() {
   return (
     <div className="app">
-      <Toolbar />
       <h1 style={{ fontSize: 20, fontWeight: 400, color: '#4a4238', marginBottom: 8 }}>
         推敲 Trace
       </h1>

@@ -1,6 +1,7 @@
 import { useRef, useEffect, useCallback } from 'react';
 import { useStore } from './store';
 import ParagraphBlock from './ParagraphBlock';
+import Toolbar from './Toolbar';
 
 export default function Editor() {
   const ref = useRef<HTMLDivElement>(null);
@@ -212,6 +213,7 @@ export default function Editor() {
       {doc.paragraphs.map((p) => (
         <ParagraphBlock key={p.id} paragraph={p} />
       ))}
+      <Toolbar />
     </div>
   );
 }
