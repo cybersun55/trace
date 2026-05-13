@@ -2,7 +2,7 @@ import { useRef, useEffect, useCallback } from 'react';
 import { useStore } from './store';
 import ParagraphBlock from './ParagraphBlock';
 import Toolbar from './Toolbar';
-import { exportTracebook, downloadText } from './storage';
+import { exportTracebook, exportTextFile } from './storage';
 import { exportPlainText } from './export';
 
 export default function Editor() {
@@ -61,7 +61,7 @@ export default function Editor() {
 
       if (mod && e.shiftKey && (e.key === 's' || e.key === 'S')) {
         e.preventDefault();
-        downloadText('写作（纯净）.txt', exportPlainText(useStore.getState().document));
+        exportTextFile(exportPlainText(useStore.getState().document), '写作（纯净）.txt');
         return;
       }
     };

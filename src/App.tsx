@@ -1,24 +1,59 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import Editor from './Editor';
 import { useStore } from './store';
-import { autoSave, exportTracebook, importTracebook, getRecentFiles, addRecentFile, downloadText, type RecentEntry } from './storage';
+import { autoSave, exportTracebook, importTracebook, exportTextFile, getRecentFiles, addRecentFile, type RecentEntry } from './storage';
 import { exportPlainText, exportMarkdown } from './export';
 import './App.css';
+
+// ---- stats helper ----
+
+function computeStats(doc: import('./types').Document) {
+  let normalChars = 0;
+  let deletedChars = 0;
+  const paragraphs = doc.paragraphs.length;
+
+  for (const p of doc.paragraphs) {
+    for (const c of p.children) {
+      if (c.type === 'text') {
+        const len = [...c.insert].length;
+        if (c.status === 'deleted') deletedChars += len;
+        else normalChars += len;
+      }
+    }
+  }
+
+  return { normalChars, deletedChars, paragraphs };
+}
+
+// ---- App ----
 
 export default function App() {
   const doc = useStore((s) => s.document);
   const loadDocument = useStore((s) => s.loadDocument);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [saved, setSaved] = useState(true);
 
   // Auto-save to localStorage on every document change
   useEffect(() => {
     autoSave(doc);
+    setSaved(true);
   }, [doc]);
+
+  // Stats
+  const stats = useMemo(() => computeStats(doc), [doc]);
+
+  // ---- new document ----
+
+  const handleNew = useCallback(() => {
+    if (stats.normalChars > 0 && !confirm('新建将丢弃当前未保存到文件的内容，确定继续？')) return;
+    loadDocument({ chapterId: 'ch1', paragraphs: [{ id: 'p1', children: [] }] });
+  }, [loadDocument, stats.normalChars]);
 
   // ---- save / open ----
 
   const handleSave = useCallback(async () => {
-    await exportTracebook(doc);
+    const ok = await exportTracebook(doc);
+    if (ok) setSaved(true);
   }, [doc]);
 
   const handleOpen = useCallback(async () => {
@@ -48,13 +83,13 @@ export default function App() {
 
   const [exportOpen, setExportOpen] = useState(false);
 
-  const handleExportTxt = useCallback(() => {
-    downloadText('写作（纯净）.txt', exportPlainText(doc));
+  const handleExportTxt = useCallback(async () => {
+    await exportTextFile(exportPlainText(doc), '写作（纯净）.txt');
     setExportOpen(false);
   }, [doc]);
 
-  const handleExportMd = useCallback(() => {
-    downloadText('写作（留痕）.md', exportMarkdown(doc));
+  const handleExportMd = useCallback(async () => {
+    await exportTextFile(exportMarkdown(doc), '写作（留痕）.md');
     setExportOpen(false);
   }, [doc]);
 
@@ -65,16 +100,21 @@ export default function App() {
 
   return (
     <div className="app">
-      <div className="app-header">
-        <h1 style={{ fontSize: 20, fontWeight: 400, color: '#4a4238', marginBottom: 0 }}>
-          推敲 Trace
-        </h1>
-        <div className="app-actions">
-          {/* Save */}
-          <button className="app-btn" onClick={handleSave} title="保存 .tracebook (⌘S)">保存</button>
+      {/* Title */}
+      <div className="app-title">推敲 Trace</div>
 
-          {/* Open */}
-          <button className="app-btn" onClick={handleOpen}>打开</button>
+      {/* Toolbar */}
+      <div className="app-toolbar">
+        <div className="app-toolbar-group">
+          <button className="app-btn" onClick={handleNew} title="新建文档">
+            <span className="app-btn-icon">📄</span> 新建
+          </button>
+          <button className="app-btn" onClick={handleOpen} title="打开 .tracebook 文件">
+            <span className="app-btn-icon">📂</span> 打开
+          </button>
+          <button className="app-btn" onClick={handleSave} title="保存 .tracebook（⌘S）">
+            <span className="app-btn-icon">💾</span> 保存
+          </button>
           <input
             ref={fileRef}
             type="file"
@@ -82,32 +122,32 @@ export default function App() {
             style={{ display: 'none' }}
             onChange={handleFileChange}
           />
+        </div>
 
-          {/* Export dropdown */}
+        <div className="app-toolbar-sep" />
+
+        <div className="app-toolbar-group">
           <div className="app-dropdown">
-            <button
-              className="app-btn"
-              onMouseDown={(e) => { e.preventDefault(); setExportOpen(!exportOpen); }}
-            >
+            <button className="app-btn" onMouseDown={(e) => { e.preventDefault(); setExportOpen(!exportOpen); }}>
               导出 ▾
             </button>
             {exportOpen && (
               <DropdownOverlay onClose={() => setExportOpen(false)}>
                 <div className="dropdown-menu">
-                  <button className="dropdown-item" onMouseDown={(e) => { e.preventDefault(); handleExportTxt(); }}>纯文本 (.txt)</button>
-                  <button className="dropdown-item" onMouseDown={(e) => { e.preventDefault(); handleExportMd(); }}>Markdown (.md)</button>
+                  <button className="dropdown-item" onMouseDown={(e) => { e.preventDefault(); handleExportTxt(); }}>
+                    纯文本 (.txt)
+                  </button>
+                  <button className="dropdown-item" onMouseDown={(e) => { e.preventDefault(); handleExportMd(); }}>
+                    Markdown (.md)
+                  </button>
                 </div>
               </DropdownOverlay>
             )}
           </div>
 
-          {/* Recent files */}
           {recentFiles.length > 0 && (
             <div className="app-dropdown">
-              <button
-                className="app-btn"
-                onMouseDown={(e) => { e.preventDefault(); setRecentOpen(!recentOpen); }}
-              >
+              <button className="app-btn" onMouseDown={(e) => { e.preventDefault(); setRecentOpen(!recentOpen); }}>
                 最近 ▾
               </button>
               {recentOpen && (
@@ -125,14 +165,48 @@ export default function App() {
             </div>
           )}
         </div>
+
+        <div className="app-toolbar-spacer" />
+
+        {/* Clear-screen toggle */}
+        <div className="app-toolbar-group">
+          <button
+            className="app-btn app-btn-ghost"
+            onClick={() => useStore.getState().toggleHideDeleted()}
+            title="切换留痕显示（Tab）"
+          >
+            👁
+          </button>
+        </div>
       </div>
-      <div className="hint">
-        Backspace <b>删除留痕</b> | Shift+Backspace <b>真删除</b> | Enter 换段 | Cmd+B/I 格式 | Tab 清屏 | Cmd+S 保存
-      </div>
+
+      {/* Divider */}
+      <div className="app-divider" />
+
+      {/* Editor */}
       <Editor />
+
+      {/* Status bar */}
+      <div className="app-statusbar">
+        <span>{stats.normalChars.toLocaleString()} 字</span>
+        <span className="app-statusbar-dot">·</span>
+        <span>{stats.paragraphs} 段</span>
+        {stats.deletedChars > 0 && (
+          <>
+            <span className="app-statusbar-dot">·</span>
+            <span>{stats.deletedChars} 处留痕</span>
+          </>
+        )}
+        <span className="app-statusbar-dot">·</span>
+        <span className={`app-statusbar-save ${saved ? 'saved' : ''}`}>
+          {saved ? '已保存 ✓' : '未保存'}
+        </span>
+      </div>
     </div>
   );
 }
+
+// ---- helpers ----
 
 /** Click-outside overlay for dropdown menus */
 function DropdownOverlay({ onClose, children }: { onClose: () => void; children: React.ReactNode }) {
@@ -144,7 +218,6 @@ function DropdownOverlay({ onClose, children }: { onClose: () => void; children:
         onClose();
       }
     };
-    // Defer so the mousedown that opened the menu doesn't immediately close it
     const id = setTimeout(() => document.addEventListener('mousedown', onDown), 0);
     return () => {
       clearTimeout(id);

@@ -23,6 +23,48 @@ export function autoLoad(): Document | null {
   }
 }
 
+// ---- generic save dialog ----
+
+interface SavePickerOptions {
+  blob: Blob;
+  suggestedName: string;
+  mimeType: string;
+  extension: string;
+}
+
+/**
+ * Saves a blob to disk. Uses native save dialog (Chromium) when available,
+ * falls back to prompt + download otherwise.
+ * Returns true if saved, false if cancelled.
+ */
+export async function saveBlobWithPicker(opts: SavePickerOptions): Promise<boolean> {
+  if ('showSaveFilePicker' in window) {
+    try {
+      const handle = await (window as any).showSaveFilePicker({
+        suggestedName: opts.suggestedName,
+        types: [{
+          description: opts.suggestedName,
+          accept: { [opts.mimeType]: [opts.extension] },
+        }],
+      });
+      const writable = await handle.createWritable();
+      await writable.write(opts.blob);
+      await writable.close();
+      return true;
+    } catch (err: any) {
+      if (err?.name === 'AbortError') return false;
+      // Fall through to download fallback on other errors
+    }
+  }
+
+  // Fallback: prompt + download
+  const filename = prompt('保存文件名：', opts.suggestedName);
+  if (!filename) return false;
+  const finalName = filename.endsWith(opts.extension) ? filename : filename + opts.extension;
+  downloadBlob(opts.blob, finalName);
+  return true;
+}
+
 // ---- .tracebook file export/import ----
 
 interface TracebookMeta {
@@ -76,35 +118,14 @@ async function buildZip(doc: Document): Promise<Blob> {
   return zip.generateAsync({ type: 'blob' });
 }
 
-export async function exportTracebook(doc: Document): Promise<void> {
+export async function exportTracebook(doc: Document): Promise<boolean> {
   const blob = await buildZip(doc);
-
-  // Prefer native save dialog (Chromium) — user picks folder + name
-  if ('showSaveFilePicker' in window) {
-    try {
-      const handle = await (window as any).showSaveFilePicker({
-        suggestedName: '写作.tracebook',
-        types: [{
-          description: 'Tracebook 文档',
-          accept: { 'application/zip': ['.tracebook'] },
-        }],
-      });
-      const writable = await handle.createWritable();
-      await writable.write(blob);
-      await writable.close();
-      return;
-    } catch (err: any) {
-      // User cancelled the dialog
-      if (err?.name === 'AbortError') return;
-      // Otherwise fall through to download fallback
-    }
-  }
-
-  // Fallback: prompt for filename, then download
-  const filename = prompt('保存文件名：', '写作.tracebook');
-  if (!filename) return;
-  const finalName = filename.endsWith('.tracebook') ? filename : filename + '.tracebook';
-  downloadBlob(blob, finalName);
+  return saveBlobWithPicker({
+    blob,
+    suggestedName: '写作.tracebook',
+    mimeType: 'application/zip',
+    extension: '.tracebook',
+  });
 }
 
 export async function importTracebook(file?: File): Promise<Document | null> {
@@ -142,15 +163,17 @@ export async function importTracebook(file?: File): Promise<Document | null> {
   }
 }
 
-function downloadBlob(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+// ---- text file export ----
+
+export function exportTextFile(text: string, suggestedName: string): Promise<boolean> {
+  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+  const ext = suggestedName.endsWith('.md') ? '.md' : '.txt';
+  return saveBlobWithPicker({
+    blob,
+    suggestedName,
+    mimeType: 'text/plain',
+    extension: ext,
+  });
 }
 
 // ---- recent files ----
@@ -180,9 +203,15 @@ export function addRecentFile(name: string): void {
   } catch {}
 }
 
-// ---- text file download ----
+// ---- helpers ----
 
-export function downloadText(filename: string, text: string): void {
-  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
-  downloadBlob(blob, filename);
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
