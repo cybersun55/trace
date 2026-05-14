@@ -30,6 +30,8 @@ export default function Editor() {
     if (!el) return;
 
     const onKD = (e: KeyboardEvent) => {
+      // Safety: reset stuck isComposing if keydown fires without composing
+      if (!e.isComposing) storeComposeSet(false);
       shiftRef.current = e.shiftKey;
 
       const mod = e.metaKey || e.ctrlKey;
