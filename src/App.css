@@ -452,3 +452,67 @@ body {
   text-align: center;
   border-top: 1px solid #f0ede6;
 }
+
+/* ---- 版本选择弹窗 ---- */
+
+.vp-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  background: rgba(0,0,0,0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vp-dialog {
+  background: #fffef9;
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+  padding: 24px 32px;
+  text-align: center;
+  min-width: 280px;
+}
+
+.vp-title {
+  font-size: 15px;
+  color: #4a4238;
+  margin-bottom: 20px;
+}
+
+.vp-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.vp-btn {
+  padding: 10px 24px;
+  border: 1px solid #d4cec0;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.1s;
+}
+.vp-btn-trace {
+  background: #f0ede6;
+  color: #4a4238;
+}
+.vp-btn-trace:hover { background: #e8e3da; }
+.vp-btn-clean {
+  background: #fffef9;
+  color: #4a4238;
+}
+.vp-btn-clean:hover { background: #f0ede6; }
+
+.vp-cancel {
+  background: none;
+  border: none;
+  font-size: 12px;
+  color: #b0a89b;
+  cursor: pointer;
+  font-family: inherit;
+}
+.vp-cancel:hover { color: #4a4238; }

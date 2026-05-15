@@ -34,7 +34,7 @@ interface SavePickerOptions {
 
 /**
  * Saves a blob to disk. Uses native save dialog (Chromium) when available,
- * falls back to prompt + download otherwise.
+ * falls back to direct download with the suggested name.
  * Returns true if saved, false if cancelled.
  */
 export async function saveBlobWithPicker(opts: SavePickerOptions): Promise<boolean> {
@@ -57,11 +57,8 @@ export async function saveBlobWithPicker(opts: SavePickerOptions): Promise<boole
     }
   }
 
-  // Fallback: prompt + download
-  const filename = prompt('保存文件名：', opts.suggestedName);
-  if (!filename) return false;
-  const finalName = filename.endsWith(opts.extension) ? filename : filename + opts.extension;
-  downloadBlob(opts.blob, finalName);
+  // Fallback: direct download
+  downloadBlob(opts.blob, opts.suggestedName);
   return true;
 }
 

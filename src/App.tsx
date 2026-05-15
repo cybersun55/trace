@@ -100,8 +100,10 @@ export default function App() {
     setExportOpen(false);
   }, [doc]);
 
-  const handleExportWord = useCallback(async () => {
-    const clean = confirm('导出纯净版（不含删除痕迹）？\n确定 = 纯净版\n取消 = 原版（含留痕）');
+  // Version picker for Word / Image
+  const [versionPick, setVersionPick] = useState<'word' | 'image' | null>(null);
+
+  const doExportWord = useCallback(async (clean: boolean) => {
     const mode = clean ? 'clean' : 'trace';
     const suffix = clean ? '（纯净）' : '（原版）';
     const blob = exportWordBlob(doc, mode);
@@ -109,14 +111,20 @@ export default function App() {
     setExportOpen(false);
   }, [doc]);
 
-  const handleExportImage = useCallback(async () => {
-    const clean = confirm('导出纯净版（不含删除痕迹）？\n确定 = 纯净版\n取消 = 原版（含留痕）');
+  const doExportImage = useCallback(async (clean: boolean) => {
     const mode = clean ? 'clean' : 'trace';
     const suffix = clean ? '（纯净）' : '（原版）';
     const blob = await exportImageBlob(doc, mode);
     await saveBlobWithPicker({ blob, suggestedName: `写作${suffix}.png`, mimeType: 'image/png', extension: '.png' });
     setExportOpen(false);
   }, [doc]);
+
+  const handleVersionPick = useCallback((clean: boolean) => {
+    const kind = versionPick;
+    setVersionPick(null);
+    if (kind === 'word') doExportWord(clean);
+    else if (kind === 'image') doExportImage(clean);
+  }, [versionPick, doExportWord, doExportImage]);
 
   // ---- recent files ----
 
@@ -169,10 +177,10 @@ export default function App() {
                   <button className="dropdown-item" onMouseDown={(e) => { e.preventDefault(); handleExportMd(); }}>
                     📝 Markdown (.md)
                   </button>
-                  <button className="dropdown-item" onMouseDown={(e) => { e.preventDefault(); handleExportWord(); }}>
+                  <button className="dropdown-item" onMouseDown={(e) => { e.preventDefault(); setExportOpen(false); setVersionPick('word'); }}>
                     📑 Word 文档 (.doc)
                   </button>
-                  <button className="dropdown-item" onMouseDown={(e) => { e.preventDefault(); handleExportImage(); }}>
+                  <button className="dropdown-item" onMouseDown={(e) => { e.preventDefault(); setExportOpen(false); setVersionPick('image'); }}>
                     🖼 图片 (.png)
                   </button>
                 </div>
@@ -223,6 +231,26 @@ export default function App() {
 
       {/* Copy modal */}
       {copyOpen && <CopyModal doc={doc} onClose={() => setCopyOpen(false)} />}
+
+      {/* Version picker dialog */}
+      {versionPick && (
+        <div className="vp-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) setVersionPick(null); }}>
+          <div className="vp-dialog">
+            <div className="vp-title">选择导出版本</div>
+            <div className="vp-buttons">
+              <button className="vp-btn vp-btn-trace" onMouseDown={(e) => { e.preventDefault(); handleVersionPick(false); }}>
+                原版（含留痕）
+              </button>
+              <button className="vp-btn vp-btn-clean" onMouseDown={(e) => { e.preventDefault(); handleVersionPick(true); }}>
+                纯净版
+              </button>
+            </div>
+            <button className="vp-cancel" onMouseDown={(e) => { e.preventDefault(); setVersionPick(null); }}>
+              取消
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Status bar */}
       <div className="app-statusbar">
