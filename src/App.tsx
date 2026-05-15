@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import Editor from './Editor';
 import { useStore } from './store';
 import { autoSave, exportTracebook, importTracebook, exportTextFile, saveBlobWithPicker, getRecentFiles, addRecentFile, type RecentEntry } from './storage';
-import { exportPlainText, exportMarkdown, exportWordBlob, exportImageBlob } from './export';
+import { exportPlainText, exportWordBlob, exportImageBlob } from './export';
 import CopyModal from './CopyModal';
 import './App.css';
 
@@ -50,12 +50,7 @@ export default function App() {
     loadDocument({ chapterId: 'ch1', paragraphs: [{ id: 'p1', children: [] }] });
   }, [loadDocument, stats.normalChars]);
 
-  // ---- save / open ----
-
-  const handleSave = useCallback(async () => {
-    const ok = await exportTracebook(doc);
-    if (ok) setSaved(true);
-  }, [doc]);
+  // ---- open ----
 
   const handleOpen = useCallback(async () => {
     if ('showOpenFilePicker' in window) {
@@ -95,8 +90,8 @@ export default function App() {
     setExportOpen(false);
   }, [doc]);
 
-  const handleExportMd = useCallback(async () => {
-    await exportTextFile(exportMarkdown(doc), '写作（留痕）.md');
+  const handleExportTracebook = useCallback(async () => {
+    await exportTracebook(doc);
     setExportOpen(false);
   }, [doc]);
 
@@ -140,13 +135,10 @@ export default function App() {
       <div className="app-toolbar">
         <div className="app-toolbar-group">
           <button className="app-btn" onClick={handleNew} title="新建文档">
-            <span className="app-btn-icon">📄</span> 新建
+            新建
           </button>
           <button className="app-btn" onClick={handleOpen} title="打开 .tracebook 文件">
-            <span className="app-btn-icon">📂</span> 打开
-          </button>
-          <button className="app-btn" onClick={handleSave} title="保存 .tracebook（⌘S）">
-            <span className="app-btn-icon">💾</span> 保存
+            打开
           </button>
           <input
             ref={fileRef}
@@ -168,20 +160,20 @@ export default function App() {
               <DropdownOverlay onClose={() => setExportOpen(false)}>
                 <div className="dropdown-menu">
                   <button className="dropdown-item" onMouseDown={(e) => { e.preventDefault(); handleCopy(); }}>
-                    📋 复制
+                    复制
                   </button>
                   <div className="dropdown-sep" />
                   <button className="dropdown-item" onMouseDown={(e) => { e.preventDefault(); handleExportTxt(); }}>
-                    📄 纯文本 (.txt)
+                    纯文本 (.txt)
                   </button>
-                  <button className="dropdown-item" onMouseDown={(e) => { e.preventDefault(); handleExportMd(); }}>
-                    📝 Markdown (.md)
+                  <button className="dropdown-item" onMouseDown={(e) => { e.preventDefault(); handleExportTracebook(); }}>
+                    源文件 (.tracebook)
                   </button>
                   <button className="dropdown-item" onMouseDown={(e) => { e.preventDefault(); setExportOpen(false); setVersionPick('word'); }}>
-                    📑 Word 文档 (.doc)
+                    Word 文档 (.doc)
                   </button>
                   <button className="dropdown-item" onMouseDown={(e) => { e.preventDefault(); setExportOpen(false); setVersionPick('image'); }}>
-                    🖼 图片 (.png)
+                    图片 (.png)
                   </button>
                 </div>
               </DropdownOverlay>
@@ -218,7 +210,7 @@ export default function App() {
             onClick={() => useStore.getState().toggleHideDeleted()}
             title="切换留痕显示（Tab）"
           >
-            👁
+            留痕
           </button>
         </div>
       </div>
@@ -239,7 +231,7 @@ export default function App() {
             <div className="vp-title">选择导出版本</div>
             <div className="vp-buttons">
               <button className="vp-btn vp-btn-trace" onMouseDown={(e) => { e.preventDefault(); handleVersionPick(false); }}>
-                原版（含留痕）
+                原版
               </button>
               <button className="vp-btn vp-btn-clean" onMouseDown={(e) => { e.preventDefault(); handleVersionPick(true); }}>
                 纯净版

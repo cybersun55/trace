@@ -157,7 +157,7 @@ export async function exportImageBlob(doc: Document, mode: RenderMode = 'trace')
 
   const container = document.createElement('div');
   container.style.cssText = `
-    position: fixed; top: 0; left: 50%; transform: translateX(-50%);
+    position: fixed; top: 0; left: 0;
     width: 720px; padding: 48px 64px 64px;
     background: #fffef9; color: #2c2c2c;
     font-family: -apple-system, BlinkMacSystemFont, 'Noto Serif SC', serif;
@@ -167,7 +167,11 @@ export async function exportImageBlob(doc: Document, mode: RenderMode = 'trace')
   const body = renderDocToHtml(doc, mode);
   const wordCount = countNormalChars(doc);
 
-  container.innerHTML = `<div style="font-size:17px;letter-spacing:0.02em;">${body}</div>
+  container.innerHTML = `<style>
+  .t-para { padding: 4px 0; }
+  .t-del { color: #b0a89b; text-decoration: line-through; }
+</style>
+<div style="font-size:17px;letter-spacing:0.02em;">${body}</div>
 <div style="margin-top:24px;text-align:right;font-size:12px;color:#b0a89b;font-family:-apple-system,BlinkMacSystemFont,sans-serif;">
   ${wordCount.toLocaleString()} 字
 </div>`;
