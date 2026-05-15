@@ -21,11 +21,9 @@ function renderNode(node: InlineNode): string {
   const styles: string[] = [];
   if (node.attributes?.bold) styles.push('font-weight:bold');
   if (node.attributes?.italic) styles.push('font-style:italic');
-  // Don't apply color/fontSize on deleted spans — the .deleted CSS rule controls appearance
-  if (node.status !== 'deleted') {
-    if (node.attributes?.color) styles.push(`color:${node.attributes.color}`);
-    if (node.attributes?.fontSize) styles.push(`font-size:${fontSizeCSS(node.attributes.fontSize)}`);
-  }
+  // Color is always suppressed for deleted spans — .deleted CSS controls it
+  if (node.attributes?.color && node.status !== 'deleted') styles.push(`color:${node.attributes.color}`);
+  if (node.attributes?.fontSize) styles.push(`font-size:${fontSizeCSS(node.attributes.fontSize)}`);
   const styleAttr = styles.length > 0 ? ` style="${styles.join(';')}"` : '';
   return `<span class="${cls}" data-len="${node.insert.length}"${styleAttr}>${escapeHtml(node.insert)}</span>`;
 }
