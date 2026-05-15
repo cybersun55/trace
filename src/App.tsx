@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import Editor from './Editor';
 import { useStore } from './store';
 import { autoSave, exportTracebook, importTracebook, exportTextFile, saveBlobWithPicker, getRecentFiles, addRecentFile, type RecentEntry } from './storage';
-import { exportPlainText, exportMarkdown, renderDocToFullHtml, exportWordBlob, exportImageBlob } from './export';
+import { exportPlainText, exportMarkdown, exportWordBlob, exportImageBlob } from './export';
 import CopyModal from './CopyModal';
 import './App.css';
 
@@ -101,24 +101,20 @@ export default function App() {
   }, [doc]);
 
   const handleExportWord = useCallback(async () => {
-    const blob = exportWordBlob(doc);
-    await saveBlobWithPicker({ blob, suggestedName: '写作（留痕）.doc', mimeType: 'application/msword', extension: '.doc' });
-    setExportOpen(false);
-  }, [doc]);
-
-  const handleExportPdf = useCallback(() => {
-    const html = renderDocToFullHtml(doc, 'trace', '写作');
-    const w = window.open('', '_blank');
-    if (!w) return;
-    w.document.write(html);
-    w.document.close();
-    setTimeout(() => w.print(), 300);
+    const clean = confirm('导出纯净版（不含删除痕迹）？\n确定 = 纯净版\n取消 = 原版（含留痕）');
+    const mode = clean ? 'clean' : 'trace';
+    const suffix = clean ? '（纯净）' : '（原版）';
+    const blob = exportWordBlob(doc, mode);
+    await saveBlobWithPicker({ blob, suggestedName: `写作${suffix}.doc`, mimeType: 'application/msword', extension: '.doc' });
     setExportOpen(false);
   }, [doc]);
 
   const handleExportImage = useCallback(async () => {
-    const blob = await exportImageBlob(doc);
-    await saveBlobWithPicker({ blob, suggestedName: '写作（留痕）.png', mimeType: 'image/png', extension: '.png' });
+    const clean = confirm('导出纯净版（不含删除痕迹）？\n确定 = 纯净版\n取消 = 原版（含留痕）');
+    const mode = clean ? 'clean' : 'trace';
+    const suffix = clean ? '（纯净）' : '（原版）';
+    const blob = await exportImageBlob(doc, mode);
+    await saveBlobWithPicker({ blob, suggestedName: `写作${suffix}.png`, mimeType: 'image/png', extension: '.png' });
     setExportOpen(false);
   }, [doc]);
 
@@ -175,9 +171,6 @@ export default function App() {
                   </button>
                   <button className="dropdown-item" onMouseDown={(e) => { e.preventDefault(); handleExportWord(); }}>
                     📑 Word 文档 (.doc)
-                  </button>
-                  <button className="dropdown-item" onMouseDown={(e) => { e.preventDefault(); handleExportPdf(); }}>
-                    🖨 PDF
                   </button>
                   <button className="dropdown-item" onMouseDown={(e) => { e.preventDefault(); handleExportImage(); }}>
                     🖼 图片 (.png)

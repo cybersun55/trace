@@ -125,8 +125,8 @@ export function renderDocToFullHtml(doc: Document, mode: RenderMode, title: stri
 
 // ---- Word (.doc) ----
 
-export function exportWordBlob(doc: Document): Blob {
-  const body = renderDocToHtml(doc, 'trace');
+export function exportWordBlob(doc: Document, mode: RenderMode = 'trace'): Blob {
+  const body = renderDocToHtml(doc, mode);
 
   const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office"
       xmlns:w="urn:schemas-microsoft-com:office:word"
@@ -149,35 +149,41 @@ export function exportWordBlob(doc: Document): Blob {
 
 // ---- Image (.png) ----
 
-export async function exportImageBlob(doc: Document): Promise<Blob> {
+export async function exportImageBlob(doc: Document, mode: RenderMode = 'trace'): Promise<Blob> {
+  // White overlay to hide the rendering process
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:#fffef9;';
+  document.body.appendChild(overlay);
+
   const container = document.createElement('div');
   container.style.cssText = `
-    position: fixed; top: 0; left: -9999px;
-    width: 720px; padding: 48px 64px;
+    position: fixed; top: 0; left: 50%; transform: translateX(-50%);
+    width: 720px; padding: 48px 64px 64px;
     background: #fffef9; color: #2c2c2c;
     font-family: -apple-system, BlinkMacSystemFont, 'Noto Serif SC', serif;
-    line-height: 1.8; z-index: -1;
+    line-height: 1.8; z-index: 10000;
   `;
 
-  const body = renderDocToHtml(doc, 'trace');
+  const body = renderDocToHtml(doc, mode);
   const wordCount = countNormalChars(doc);
 
   container.innerHTML = `<div style="font-size:17px;letter-spacing:0.02em;">${body}</div>
-<div style="position:absolute;right:64px;bottom:24px;font-size:12px;color:#b0a89b;font-family:-apple-system,BlinkMacSystemFont,sans-serif;">
+<div style="margin-top:24px;text-align:right;font-size:12px;color:#b0a89b;font-family:-apple-system,BlinkMacSystemFont,sans-serif;">
   ${wordCount.toLocaleString()} 字
 </div>`;
 
   document.body.appendChild(container);
 
+  // Wait for layout
+  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+
   try {
-    const dataUrl = await toPng(container, {
-      pixelRatio: 2,
-      skipFonts: true,
-    });
+    const dataUrl = await toPng(container, { pixelRatio: 2 });
     const resp = await fetch(dataUrl);
     return await resp.blob();
   } finally {
     document.body.removeChild(container);
+    document.body.removeChild(overlay);
   }
 }
 

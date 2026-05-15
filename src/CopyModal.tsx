@@ -53,9 +53,6 @@ export default function CopyModal({ doc, onClose }: Props) {
           className="copy-modal-content"
           dangerouslySetInnerHTML={{ __html: html }}
         />
-        <div className="copy-modal-hint">
-          选中文字后 ⌘C 复制
-        </div>
       </div>
     </div>
   );
