@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import Editor from './Editor';
 import { useStore } from './store';
-import { autoSave, exportTracebook, importTracebook, exportTextFile, getRecentFiles, addRecentFile, type RecentEntry } from './storage';
-import { exportPlainText, exportMarkdown } from './export';
+import { autoSave, exportTracebook, importTracebook, exportTextFile, saveBlobWithPicker, getRecentFiles, addRecentFile, type RecentEntry } from './storage';
+import { exportPlainText, exportMarkdown, renderDocToFullHtml, exportWordBlob, exportImageBlob } from './export';
+import CopyModal from './CopyModal';
 import './App.css';
 
 // ---- stats helper ----
@@ -82,6 +83,12 @@ export default function App() {
   // ---- export ----
 
   const [exportOpen, setExportOpen] = useState(false);
+  const [copyOpen, setCopyOpen] = useState(false);
+
+  const handleCopy = useCallback(() => {
+    setCopyOpen(true);
+    setExportOpen(false);
+  }, []);
 
   const handleExportTxt = useCallback(async () => {
     await exportTextFile(exportPlainText(doc), '写作（纯净）.txt');
@@ -90,6 +97,28 @@ export default function App() {
 
   const handleExportMd = useCallback(async () => {
     await exportTextFile(exportMarkdown(doc), '写作（留痕）.md');
+    setExportOpen(false);
+  }, [doc]);
+
+  const handleExportWord = useCallback(async () => {
+    const blob = exportWordBlob(doc);
+    await saveBlobWithPicker({ blob, suggestedName: '写作（留痕）.doc', mimeType: 'application/msword', extension: '.doc' });
+    setExportOpen(false);
+  }, [doc]);
+
+  const handleExportPdf = useCallback(() => {
+    const html = renderDocToFullHtml(doc, 'trace', '写作');
+    const w = window.open('', '_blank');
+    if (!w) return;
+    w.document.write(html);
+    w.document.close();
+    setTimeout(() => w.print(), 300);
+    setExportOpen(false);
+  }, [doc]);
+
+  const handleExportImage = useCallback(async () => {
+    const blob = await exportImageBlob(doc);
+    await saveBlobWithPicker({ blob, suggestedName: '写作（留痕）.png', mimeType: 'image/png', extension: '.png' });
     setExportOpen(false);
   }, [doc]);
 
@@ -134,11 +163,24 @@ export default function App() {
             {exportOpen && (
               <DropdownOverlay onClose={() => setExportOpen(false)}>
                 <div className="dropdown-menu">
+                  <button className="dropdown-item" onMouseDown={(e) => { e.preventDefault(); handleCopy(); }}>
+                    📋 复制
+                  </button>
+                  <div className="dropdown-sep" />
                   <button className="dropdown-item" onMouseDown={(e) => { e.preventDefault(); handleExportTxt(); }}>
-                    纯文本 (.txt)
+                    📄 纯文本 (.txt)
                   </button>
                   <button className="dropdown-item" onMouseDown={(e) => { e.preventDefault(); handleExportMd(); }}>
-                    Markdown (.md)
+                    📝 Markdown (.md)
+                  </button>
+                  <button className="dropdown-item" onMouseDown={(e) => { e.preventDefault(); handleExportWord(); }}>
+                    📑 Word 文档 (.doc)
+                  </button>
+                  <button className="dropdown-item" onMouseDown={(e) => { e.preventDefault(); handleExportPdf(); }}>
+                    🖨 PDF
+                  </button>
+                  <button className="dropdown-item" onMouseDown={(e) => { e.preventDefault(); handleExportImage(); }}>
+                    🖼 图片 (.png)
                   </button>
                 </div>
               </DropdownOverlay>
@@ -185,6 +227,9 @@ export default function App() {
 
       {/* Editor */}
       <Editor />
+
+      {/* Copy modal */}
+      {copyOpen && <CopyModal doc={doc} onClose={() => setCopyOpen(false)} />}
 
       {/* Status bar */}
       <div className="app-statusbar">
