@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import Editor from './Editor';
-import { useStore } from './store';
+import { useEditorStore } from './store';
 import { exportTracebook, importTracebook, exportTextFile, saveBlobWithPicker, getRecentFiles, addRecentFile, type RecentEntry } from './storage';
 import { exportPlainText, exportWordBlob, exportImageBlob } from './export';
 import CopyModal from './CopyModal';
@@ -29,8 +29,8 @@ function computeStats(doc: import('./types').Document) {
 // ---- App ----
 
 export default function App() {
-  const doc = useStore((s) => s.document);
-  const loadDocument = useStore((s) => s.loadDocument);
+  const doc = useEditorStore((s) => s.document);
+  const loadDocument = useEditorStore((s) => s.loadDocument);
   const fileRef = useRef<HTMLInputElement>(null);
   const [saved, setSaved] = useState(true);
 
@@ -201,7 +201,7 @@ export default function App() {
         <div className="app-toolbar-group">
           <button
             className="app-btn app-btn-ghost"
-            onClick={() => useStore.getState().toggleHideDeleted()}
+            onClick={() => useEditorStore.getState().toggleHideDeleted()}
             title="切换留痕显示（Tab）"
           >
             留痕

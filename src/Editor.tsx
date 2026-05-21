@@ -1,5 +1,5 @@
 import { useRef, useEffect, useCallback } from 'react';
-import { useStore } from './store';
+import { useEditorStore } from './store';
 import ParagraphBlock from './ParagraphBlock';
 import Toolbar from './Toolbar';
 import { exportTracebook, exportTextFile } from './storage';
@@ -7,21 +7,21 @@ import { exportPlainText } from './export';
 
 export default function Editor() {
   const ref = useRef<HTMLDivElement>(null);
-  const doc = useStore((s) => s.document);
+  const doc = useEditorStore((s) => s.document);
   // Selection is NOT subscribed here — reading it would trigger re-renders
   // on every selection change, destroying the browser's native DOM selection.
   // Store functions read it via getState(); cursor restoration reads it below.
 
-  const setSelection = useStore((s) => s.setSelection);
-  const storeInsert = useStore((s) => s.insertText);
-  const storeSoft = useStore((s) => s.softDelete);
-  const storeHard = useStore((s) => s.hardDelete);
-  const storeSplit = useStore((s) => s.splitParagraph);
-  const storeComposeSet = useStore((s) => s.setIsComposing);
-  const storeToggleHide = useStore((s) => s.toggleHideDeleted);
-  const storeToggleBold = useStore((s) => s.toggleBold);
-  const storeToggleItalic = useStore((s) => s.toggleItalic);
-  const hideDeleted = useStore((s) => s.hideDeleted);
+  const setSelection = useEditorStore((s) => s.setSelection);
+  const storeInsert = useEditorStore((s) => s.insertText);
+  const storeSoft = useEditorStore((s) => s.softDelete);
+  const storeHard = useEditorStore((s) => s.hardDelete);
+  const storeSplit = useEditorStore((s) => s.splitParagraph);
+  const storeComposeSet = useEditorStore((s) => s.setIsComposing);
+  const storeToggleHide = useEditorStore((s) => s.toggleHideDeleted);
+  const storeToggleBold = useEditorStore((s) => s.toggleBold);
+  const storeToggleItalic = useEditorStore((s) => s.toggleItalic);
+  const hideDeleted = useEditorStore((s) => s.hideDeleted);
 
   const shiftRef = useRef(false);
 
@@ -56,14 +56,14 @@ export default function Editor() {
         }
         if (e.key === 's' || e.key === 'S') {
           e.preventDefault();
-          exportTracebook(useStore.getState().document);
+          exportTracebook(useEditorStore.getState().document);
           return;
         }
       }
 
       if (mod && e.shiftKey && (e.key === 's' || e.key === 'S')) {
         e.preventDefault();
-        exportTextFile(exportPlainText(useStore.getState().document), '写作（纯净）.txt');
+        exportTextFile(exportPlainText(useEditorStore.getState().document), '写作（纯净）.txt');
         return;
       }
     };
@@ -78,7 +78,7 @@ export default function Editor() {
     if (!el) return;
 
     const onBeforeInput = (e: InputEvent) => {
-      const state = useStore.getState();
+      const state = useEditorStore.getState();
       if (e.isComposing || state.isComposing) return;
 
       e.preventDefault();
@@ -119,7 +119,7 @@ export default function Editor() {
 
   // Cursor / selection restoration (only on document change, not on selection change)
   useEffect(() => {
-    const sel = useStore.getState().selection;
+    const sel = useEditorStore.getState().selection;
     if (!sel) return;
     const el = ref.current;
     if (!el) return;
@@ -194,7 +194,7 @@ export default function Editor() {
   // (Cmd+A, Shift+Click, drag, etc.), not just mouseUp/keyUp.
   useEffect(() => {
     const onSelChange = () => {
-      if (useStore.getState().isComposing) return;
+      if (useEditorStore.getState().isComposing) return;
       syncSelection();
     };
     document.addEventListener('selectionchange', onSelChange);

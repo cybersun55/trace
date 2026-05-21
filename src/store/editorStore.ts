@@ -1,6 +1,6 @@
 import { create } from 'zustand';
-import type { Paragraph, Document, AllowedStyles } from './types';
-import { normalizeParagraph, insertTextAt, formatRange, getFormatAt } from './engine';
+import type { Paragraph, Document, AllowedStyles } from '../types';
+import { normalizeParagraph, insertTextAt, formatRange, getFormatAt } from '../engine';
 
 
 let _pidCounter = 0;
@@ -215,7 +215,7 @@ function applyFormatToSelection(doc: Document, sel: EditorSelection, attrs: Part
     newParas[i] = formatRange(newParas[i], f, t, finalAttrs as Partial<AllowedStyles>);
   }
 
-  useStore.setState((s) => ({
+  useEditorStore.setState((s) => ({
     document: { ...s.document, paragraphs: newParas },
   }));
 }
@@ -255,9 +255,11 @@ interface EditorState {
   hardDelete: () => void;
   splitParagraph: () => void;
   loadDocument: (doc: Document) => void;
+  getDocument: () => Document;
+  initDocument: (doc: Document) => void;
 }
 
-export const useStore = create<EditorState>((set, get) => ({
+export const useEditorStore = create<EditorState>((set, get) => ({
   document: { chapterId: 'ch1', paragraphs: [{ id: 'p1', children: [] }] },
   selection: null,
   isComposing: false,
@@ -581,6 +583,8 @@ export const useStore = create<EditorState>((set, get) => ({
   },
 
   loadDocument: (doc) => set({ document: doc }),
+  getDocument: () => get().document,
+  initDocument: (doc) => set({ document: doc, selection: null, activeFormats: {} }),
 }));
 
 

@@ -1,16 +1,16 @@
 import { useState, useRef, useEffect } from 'react';
-import { useStore } from './store';
+import { useEditorStore } from './store';
 
 const PRESET_COLORS = ['#2c2c2c', '#e74c3c', '#e67e22', '#f1c40f', '#2ecc71', '#3498db', '#9b59b6', '#b0a89b'];
 const FONT_SIZES = ['small', 'medium', 'large'];
 
 export default function Toolbar() {
-  const toggleBold = useStore((s) => s.toggleBold);
-  const toggleItalic = useStore((s) => s.toggleItalic);
-  const setColor = useStore((s) => s.setColor);
-  const setFontSize = useStore((s) => s.setFontSize);
-  const selection = useStore((s) => s.selection);
-  const activeFormats = useStore((s) => s.activeFormats);
+  const toggleBold = useEditorStore((s) => s.toggleBold);
+  const toggleItalic = useEditorStore((s) => s.toggleItalic);
+  const setColor = useEditorStore((s) => s.setColor);
+  const setFontSize = useEditorStore((s) => s.setFontSize);
+  const selection = useEditorStore((s) => s.selection);
+  const activeFormats = useEditorStore((s) => s.activeFormats);
 
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
 
