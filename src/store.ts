@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { Paragraph, Document, AllowedStyles } from './types';
 import { normalizeParagraph, insertTextAt, formatRange, getFormatAt } from './engine';
-import { autoLoad, autoSave } from './storage';
+
 
 let _pidCounter = 0;
 function nextPid(): string {
@@ -258,7 +258,7 @@ interface EditorState {
 }
 
 export const useStore = create<EditorState>((set, get) => ({
-  document: autoLoad() || { chapterId: 'ch1', paragraphs: [{ id: 'p1', children: [] }] },
+  document: { chapterId: 'ch1', paragraphs: [{ id: 'p1', children: [] }] },
   selection: null,
   isComposing: false,
   hideDeleted: false,
@@ -583,10 +583,4 @@ export const useStore = create<EditorState>((set, get) => ({
   loadDocument: (doc) => set({ document: doc }),
 }));
 
-// Synchronous auto-save — fires immediately on state change, before React render.
-// Survives sudden crash/power loss because write happens synchronously.
-useStore.subscribe((state, prevState) => {
-  if (state.document !== prevState.document) {
-    autoSave(state.document);
-  }
-});
+

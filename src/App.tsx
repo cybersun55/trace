@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import Editor from './Editor';
 import { useStore } from './store';
-import { autoSave, exportTracebook, importTracebook, exportTextFile, saveBlobWithPicker, getRecentFiles, addRecentFile, type RecentEntry } from './storage';
+import { exportTracebook, importTracebook, exportTextFile, saveBlobWithPicker, getRecentFiles, addRecentFile, type RecentEntry } from './storage';
 import { exportPlainText, exportWordBlob, exportImageBlob } from './export';
 import CopyModal from './CopyModal';
 import './App.css';
@@ -33,12 +33,6 @@ export default function App() {
   const loadDocument = useStore((s) => s.loadDocument);
   const fileRef = useRef<HTMLInputElement>(null);
   const [saved, setSaved] = useState(true);
-
-  // Auto-save to localStorage on every document change
-  useEffect(() => {
-    autoSave(doc);
-    setSaved(true);
-  }, [doc]);
 
   // Stats
   const stats = useMemo(() => computeStats(doc), [doc]);

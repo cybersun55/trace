@@ -26,3 +26,39 @@ export interface Document {
   chapterId: string;
   paragraphs: Paragraph[];
 }
+
+// ---- Project-level types ----
+
+export type ProjectType = 'article' | 'book';
+
+export interface ProjectMeta {
+  id: string;
+  title: string;
+  type: ProjectType;
+  createdAt: string;
+  updatedAt: string;
+  wordCount: number;
+}
+
+export interface ChapterEntry {
+  id: string;
+  title: string;
+}
+
+export interface TableOfContents {
+  chapters: ChapterEntry[];
+}
+
+export interface AppSettings {
+  lastOpenProjectId: string | null;
+  recentProjects: RecentProjectEntry[];
+}
+
+export interface RecentProjectEntry {
+  id: string;
+  title: string;
+  type: ProjectType;
+  lastOpened: string;
+}
+
+export type AppView = 'dashboard' | 'editor';
