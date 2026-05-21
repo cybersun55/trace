@@ -202,3 +202,94 @@ function countNormalChars(doc: Document): number {
   }
   return total;
 }
+
+// ---- Book combined exports ----
+
+interface ChapterData {
+  title: string;
+  doc: Document;
+}
+
+export function exportBookPlainText(chapters: ChapterData[]): string {
+  const parts: string[] = [];
+  for (let i = 0; i < chapters.length; i++) {
+    if (i > 0) parts.push('\n\n---\n\n');
+    parts.push(exportPlainText(chapters[i].doc));
+  }
+  return parts.join('');
+}
+
+export function renderBookToHtml(chapters: ChapterData[], mode: RenderMode): string {
+  const parts: string[] = [];
+  for (const ch of chapters) {
+    parts.push(`<h2 style="font-size:1.2em;font-weight:600;margin:1.5em 0 0.5em;color:#4a4238;">${escapeHtml(ch.title)}</h2>`);
+    parts.push(renderDocToHtml(ch.doc, mode));
+  }
+  return parts.join('\n');
+}
+
+export function exportBookWordBlob(chapters: ChapterData[], mode: RenderMode = 'trace'): Blob {
+  const body = renderBookToHtml(chapters, mode);
+
+  const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office"
+      xmlns:w="urn:schemas-microsoft-com:office:word"
+      xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View></w:WordDocument></xml><![endif]-->
+<style>
+  body { font-family: 'Noto Serif SC', serif; color: #2c2c2c; line-height: 1.8; padding: 40px 60px; }
+  .t-para { padding: 4px 0; font-size: 17px; }
+  .t-del { color: #999; text-decoration: line-through; }
+</style>
+</head>
+<body>${body}</body>
+</html>`;
+
+  return new Blob([html], { type: 'application/msword;charset=utf-8' });
+}
+
+export async function exportBookImageBlob(
+  chapters: ChapterData[],
+  mode: RenderMode = 'trace',
+): Promise<Blob> {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:#fffef9;';
+  document.body.appendChild(overlay);
+
+  const container = document.createElement('div');
+  container.style.cssText = `
+    position: fixed; top: 0; left: 0;
+    width: 720px; padding: 48px 64px 64px;
+    background: #fffef9; color: #2c2c2c;
+    font-family: -apple-system, BlinkMacSystemFont, 'Noto Serif SC', serif;
+    line-height: 1.8; z-index: 10000;
+  `;
+
+  const body = renderBookToHtml(chapters, mode);
+  let totalWords = 0;
+  for (const ch of chapters) totalWords += countNormalChars(ch.doc);
+
+  container.innerHTML = `<style>
+  .t-para { padding: 4px 0; }
+  .t-del { color: #b0a89b; text-decoration: line-through; }
+</style>
+<div style="font-size:17px;letter-spacing:0.02em;">${body}</div>
+<div style="margin-top:24px;text-align:right;font-size:12px;color:#b0a89b;font-family:-apple-system,BlinkMacSystemFont,sans-serif;">
+  ${totalWords.toLocaleString()} 字
+</div>`;
+
+  document.body.appendChild(container);
+
+  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+  try {
+    const dataUrl = await toPng(container, { pixelRatio: 2 });
+    const resp = await fetch(dataUrl);
+    return await resp.blob();
+  } finally {
+    document.body.removeChild(container);
+    document.body.removeChild(overlay);
+  }
+}
