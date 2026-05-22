@@ -35,9 +35,7 @@ export default function Dashboard() {
   };
 
   const handleDelete = async (id: string) => {
-    try {
-      await deleteProject(id);
-    } catch {}
+    try { await deleteProject(id); } catch {}
     setDeleteConfirm(null);
   };
 
@@ -55,21 +53,7 @@ export default function Dashboard() {
     <div className="app">
       <div className="db-header">
         <div className="db-title">推敲 Trace</div>
-        <div className="db-subtitle">作品列表</div>
       </div>
-
-      {opfsOk && (
-        <div className="db-toolbar">
-          <button className="app-btn" onClick={() => setNewDialog(true)}>
-            新建
-          </button>
-          <button className="app-btn" onClick={handleImport}>
-            导入 .tracebook
-          </button>
-        </div>
-      )}
-
-      <div className="app-divider" />
 
       {!opfsOk && (
         <div className="db-error">
@@ -95,11 +79,14 @@ export default function Dashboard() {
 
       {opfsOk && !isLoading && !error && projects.length === 0 && (
         <div className="db-empty">
-          <div className="db-empty-icon">pen</div>
-          <div className="db-empty-text">还没有作品</div>
-          <button className="vp-btn vp-btn-trace" onClick={() => setNewDialog(true)}>
-            开始写作
-          </button>
+          <div className="db-empty-actions">
+            <button className="db-big-btn" onClick={() => setNewDialog(true)}>
+              新建作品
+            </button>
+            <button className="db-big-btn db-big-btn-import" onClick={handleImport}>
+              导入 .tracebook
+            </button>
+          </div>
         </div>
       )}
 
@@ -114,6 +101,15 @@ export default function Dashboard() {
               onRename={renameProject}
             />
           ))}
+          {/* New / Import as cards at the end of the grid */}
+          <button className="pc-card pc-card-add" onClick={() => setNewDialog(true)}>
+            <span className="pc-add-icon">+</span>
+            <span className="pc-add-label">新建</span>
+          </button>
+          <button className="pc-card pc-card-add" onClick={handleImport}>
+            <span className="pc-add-icon">doc</span>
+            <span className="pc-add-label">导入</span>
+          </button>
         </div>
       )}
 

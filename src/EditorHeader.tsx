@@ -1,24 +1,8 @@
-import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useEditorStore, useProjectStore } from './store';
 import { exportTracebook, exportTextFile, saveBlobWithPicker } from './storage';
 import { exportPlainText, exportWordBlob, exportImageBlob } from './export';
 import CopyModal from './CopyModal';
-
-function computeStats(doc: import('./types').Document) {
-  let normalChars = 0;
-  let deletedChars = 0;
-  const paragraphs = doc.paragraphs.length;
-  for (const p of doc.paragraphs) {
-    for (const c of p.children) {
-      if (c.type === 'text') {
-        const len = [...c.insert].length;
-        if (c.status === 'deleted') deletedChars += len;
-        else normalChars += len;
-      }
-    }
-  }
-  return { normalChars, deletedChars, paragraphs };
-}
 
 export default function EditorHeader() {
   const doc = useEditorStore((s) => s.document);
@@ -26,12 +10,30 @@ export default function EditorHeader() {
   const chapters = useProjectStore((s) => s.chapters);
   const activeChapterId = useProjectStore((s) => s.activeChapterId);
   const closeProject = useProjectStore((s) => s.closeProject);
-
-  const stats = useMemo(() => computeStats(doc), [doc]);
+  const renameProject = useProjectStore((s) => s.renameProject);
 
   const [exportOpen, setExportOpen] = useState(false);
   const [copyOpen, setCopyOpen] = useState(false);
   const [versionPick, setVersionPick] = useState<'word' | 'image' | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [etitle, setEtitle] = useState('');
+  const titRef = useRef<HTMLInputElement>(null);
+
+  // Title editing
+  const startEdit = useCallback(() => {
+    if (!activeProject) return;
+    setEtitle(activeProject.title);
+    setEditing(true);
+    requestAnimationFrame(() => titRef.current?.select());
+  }, [activeProject]);
+
+  const commitEdit = useCallback(() => {
+    const t = etitle.trim();
+    if (t && activeProject && t !== activeProject.title) {
+      renameProject(activeProject.id, t);
+    }
+    setEditing(false);
+  }, [etitle, activeProject, renameProject]);
 
   const handleCopy = useCallback(() => {
     setCopyOpen(true);
@@ -82,11 +84,27 @@ export default function EditorHeader() {
     <>
       <div className="eh-header">
         <button className="eh-back" onClick={closeProject} title="返回作品列表">
-          ← 作品列表
+          ←
         </button>
 
         <div className="eh-center">
-          <div className="eh-title">{activeProject?.title || '推敲 Trace'}</div>
+          {editing ? (
+            <input
+              ref={titRef}
+              className="eh-title-input"
+              value={etitle}
+              onChange={(e) => setEtitle(e.target.value)}
+              onBlur={commitEdit}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') commitEdit();
+                if (e.key === 'Escape') setEditing(false);
+              }}
+            />
+          ) : (
+            <div className="eh-title" onClick={startEdit} title="点击修改标题">
+              {activeProject?.title || '推敲 Trace'}
+            </div>
+          )}
           {isBook && currentChapter && (
             <div className="eh-chapter-indicator">
               第 {chapters.findIndex(c => c.id === activeChapterId) + 1}/{chapters.length} 章 · {currentChapter.title}
@@ -124,11 +142,11 @@ export default function EditorHeader() {
           </div>
 
           <button
-            className="app-btn app-btn-ghost"
+            className="eh-clear-btn"
             onClick={() => useEditorStore.getState().toggleHideDeleted()}
-            title="切换留痕显示（Tab）"
+            title="清屏（Tab）"
           >
-            留痕
+            清屏
           </button>
         </div>
       </div>
@@ -155,18 +173,6 @@ export default function EditorHeader() {
           </div>
         </div>
       )}
-
-      <div className="app-statusbar">
-        <span>{stats.normalChars.toLocaleString()} 字</span>
-        <span className="app-statusbar-dot">·</span>
-        <span>{stats.paragraphs} 段</span>
-        {stats.deletedChars > 0 && (
-          <>
-            <span className="app-statusbar-dot">·</span>
-            <span>{stats.deletedChars} 处留痕</span>
-          </>
-        )}
-      </div>
     </>
   );
 }

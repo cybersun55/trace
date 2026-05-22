@@ -1,5 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { useProjectStore } from './store';
+import { updateChapterTitle } from './storage/projects';
+
 
 export default function ChapterSidebar() {
   const {
@@ -10,6 +12,9 @@ export default function ChapterSidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [adding, setAdding] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editVal, setEditVal] = useState('');
+  const editRef = useRef<HTMLInputElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const isBook = activeProject?.type === 'book';
@@ -28,9 +33,27 @@ export default function ChapterSidebar() {
     requestAnimationFrame(() => inputRef.current?.focus());
   };
 
+  // Chapter title inline edit
+  const startEdit = (id: string, title: string) => {
+    setEditingId(id);
+    setEditVal(title);
+    requestAnimationFrame(() => editRef.current?.focus());
+  };
+
+  const commitEdit = async (id: string) => {
+    const t = editVal.trim();
+    if (t && activeProject) {
+      await updateChapterTitle(activeProject.id, id, t);
+      // Refresh local chapters list
+      const { loadTOC } = await import('./storage/projects');
+      const toc = await loadTOC(activeProject.id);
+      if (toc) useProjectStore.setState({ chapters: toc.chapters });
+    }
+    setEditingId(null);
+  };
+
   return (
     <>
-      {/* Collapse toggle when hidden */}
       {collapsed && (
         <button className="cs-toggle" onClick={() => setCollapsed(false)} title="展开章节列表">
           章
@@ -53,7 +76,28 @@ export default function ChapterSidebar() {
               onClick={() => switchChapter(ch.id)}
             >
               <span className="cs-item-num">{i + 1}</span>
-              <span className="cs-item-title">{ch.title}</span>
+              {editingId === ch.id ? (
+                <input
+                  ref={editRef}
+                  className="cs-title-input"
+                  value={editVal}
+                  onChange={(e) => setEditVal(e.target.value)}
+                  onBlur={() => commitEdit(ch.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') commitEdit(ch.id);
+                    if (e.key === 'Escape') setEditingId(null);
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                />
+              ) : (
+                <span
+                  className="cs-item-title"
+                  onDoubleClick={(e) => { e.stopPropagation(); startEdit(ch.id, ch.title); }}
+                  title="双击修改章节标题"
+                >
+                  {ch.title}
+                </span>
+              )}
             </button>
           ))}
         </div>
