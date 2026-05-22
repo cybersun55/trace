@@ -5,6 +5,29 @@
 
 const ROOT_NAME = 'trace_projects';
 let rootHandle: FileSystemDirectoryHandle | null = null;
+let _checked = false;
+let _available = false;
+
+/** Check if OPFS is available. Safe to call multiple times — only probes once. */
+export async function isOPFSAvailable(): Promise<boolean> {
+  if (_checked) return _available;
+  _checked = true;
+  try {
+    if (!('storage' in navigator)) return false;
+    const root = await navigator.storage.getDirectory();
+    // Try a test write to verify full access
+    const handle = await root.getFileHandle('_test_', { create: true });
+    const w = await handle.createWritable();
+    await w.write('ok');
+    await w.close();
+    await root.removeEntry('_test_');
+    _available = true;
+    return true;
+  } catch {
+    _available = false;
+    return false;
+  }
+}
 
 export async function getRoot(): Promise<FileSystemDirectoryHandle> {
   if (rootHandle) return rootHandle;

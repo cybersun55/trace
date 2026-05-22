@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useProjectStore } from './store';
-import { importTracebookFull } from './storage';
+import { importTracebookFull, isOPFSAvailable } from './storage';
 import ProjectCard from './ProjectCard';
 import NewProjectDialog from './NewProjectDialog';
 import type { ProjectType } from './types';
@@ -11,31 +11,44 @@ export default function Dashboard() {
     loadProjectList, openProject, createProject, deleteProject, renameProject,
   } = useProjectStore();
 
+  const [opfsOk, setOpfsOk] = useState(true);
   const [newDialog, setNewDialog] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   useEffect(() => {
-    loadProjectList();
+    (async () => {
+      const ok = await isOPFSAvailable();
+      setOpfsOk(ok);
+      if (ok) loadProjectList();
+    })();
   }, [loadProjectList]);
 
   const handleNew = async (title: string, type: ProjectType) => {
-    const id = await createProject(title, type);
-    setNewDialog(false);
-    if (id) openProject(id);
+    try {
+      const id = await createProject(title, type);
+      setNewDialog(false);
+      if (id) await openProject(id);
+    } catch {
+      setNewDialog(false);
+      useProjectStore.setState({ error: '存储空间不足或浏览器不支持' });
+    }
   };
 
   const handleDelete = async (id: string) => {
-    await deleteProject(id);
+    try {
+      await deleteProject(id);
+    } catch {}
     setDeleteConfirm(null);
   };
 
   const handleImport = async () => {
-    const result = await importTracebookFull();
-    if (!result) return;
-    // Import as either article or book
-    const pid = await createProject(result.title, result.type);
-    if (!pid) return;
-    openProject(pid);
+    try {
+      const result = await importTracebookFull();
+      if (!result) return;
+      const pid = await createProject(result.title, result.type);
+      if (!pid) return;
+      await openProject(pid);
+    } catch {}
   };
 
   return (
@@ -45,18 +58,28 @@ export default function Dashboard() {
         <div className="db-subtitle">作品列表</div>
       </div>
 
-      <div className="db-toolbar">
-        <button className="app-btn" onClick={() => setNewDialog(true)}>
-          新建
-        </button>
-        <button className="app-btn" onClick={handleImport}>
-          导入 .tracebook
-        </button>
-      </div>
+      {opfsOk && (
+        <div className="db-toolbar">
+          <button className="app-btn" onClick={() => setNewDialog(true)}>
+            新建
+          </button>
+          <button className="app-btn" onClick={handleImport}>
+            导入 .tracebook
+          </button>
+        </div>
+      )}
 
       <div className="app-divider" />
 
-      {isLoading && (
+      {!opfsOk && (
+        <div className="db-error">
+          <p>此浏览器不支持本地持久存储</p>
+          <p>请使用 Chromium 内核浏览器（Chrome / Edge / Opera），
+            且不要使用隐私/无痕模式。</p>
+        </div>
+      )}
+
+      {opfsOk && isLoading && (
         <div className="db-loading">
           {[1, 2, 3].map((i) => (
             <div key={i} className="pc-card pc-skeleton" />
@@ -64,14 +87,13 @@ export default function Dashboard() {
         </div>
       )}
 
-      {error && (
+      {opfsOk && error && (
         <div className="db-error">
           <p>{error}</p>
-          <p>请检查浏览器是否支持持久存储，或使用标准模式打开。</p>
         </div>
       )}
 
-      {!isLoading && !error && projects.length === 0 && (
+      {opfsOk && !isLoading && !error && projects.length === 0 && (
         <div className="db-empty">
           <div className="db-empty-icon">pen</div>
           <div className="db-empty-text">还没有作品</div>
@@ -81,13 +103,13 @@ export default function Dashboard() {
         </div>
       )}
 
-      {!isLoading && projects.length > 0 && (
+      {opfsOk && !isLoading && !error && projects.length > 0 && (
         <div className="db-grid">
           {projects.map((p) => (
             <ProjectCard
               key={p.id}
               project={p}
-              onOpen={openProject}
+              onOpen={(id) => { openProject(id).catch(() => {}); }}
               onDelete={(id) => setDeleteConfirm(id)}
               onRename={renameProject}
             />

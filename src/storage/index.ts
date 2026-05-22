@@ -1,4 +1,5 @@
 export {
+  isOPFSAvailable,
   getRoot,
   getProjectsDir,
   getProjectDir,

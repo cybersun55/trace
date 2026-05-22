@@ -56,27 +56,31 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       const meta = await projects.loadProjectMeta(id);
       if (!meta) throw new Error('Project not found');
 
-      const doc = await projects.loadChapter(id, 'main', meta.type);
+      let chapters: ChapterEntry[] = [];
+      let activeChapterId: string | null;
+      let doc: Document | null = null;
+
+      if (meta.type === 'book') {
+        const toc = await projects.loadTOC(id);
+        if (!toc || toc.chapters.length === 0) {
+          // Repair: create a default chapter for empty books
+          const entry = await projects.createChapter(id, '第1章');
+          chapters = [entry];
+          activeChapterId = entry.id;
+        } else {
+          chapters = toc.chapters;
+          activeChapterId = toc.chapters[0].id;
+        }
+        doc = await projects.loadChapter(id, activeChapterId, 'book');
+      } else {
+        activeChapterId = 'main';
+        doc = await projects.loadChapter(id, activeChapterId, 'article');
+      }
+
       if (!doc) throw new Error('Document not found');
 
       useEditorStore.getState().initDocument(doc);
       crashClear();
-
-      let chapters: ChapterEntry[] = [];
-      let activeChapterId: string | null = 'main';
-
-      if (meta.type === 'book') {
-        const toc = await projects.loadTOC(id);
-        if (toc) {
-          chapters = toc.chapters;
-          activeChapterId = toc.chapters[0]?.id || null;
-          // Load first chapter
-          if (activeChapterId) {
-            const chDoc = await projects.loadChapter(id, activeChapterId, 'book');
-            if (chDoc) useEditorStore.getState().initDocument(chDoc);
-          }
-        }
-      }
 
       settings.addRecentProject({ id, title: meta.title, type: meta.type, lastOpened: new Date().toISOString() });
 
