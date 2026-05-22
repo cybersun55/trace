@@ -566,26 +566,9 @@ body {
   user-select: none;
 }
 
-.db-empty-actions {
-  display: flex;
-  gap: 20px;
-}
-
-.db-big-btn {
-  padding: 48px 64px;
-  border: 2px dashed #d4cec0;
-  border-radius: 12px;
-  background: transparent;
-  font-size: 18px;
-  color: #8c8276;
-  cursor: pointer;
-  font-family: inherit;
-  transition: border-color 0.15s, background 0.15s, color 0.15s;
-}
-.db-big-btn:hover {
-  border-color: #b0a89b;
-  color: #4a4238;
-  background: #faf8f5;
+.db-empty-text {
+  font-size: 14px;
+  color: #b0a89b;
 }
 
 .db-grid {
@@ -722,30 +705,6 @@ body {
   z-index: 200;
   min-width: 120px;
   padding: 4px;
-}
-
-.pc-card-add {
-  justify-content: center;
-  align-items: center;
-  border: 2px dashed #e8e3da;
-  background: transparent;
-  gap: 8px;
-  min-height: 110px;
-}
-.pc-card-add:hover {
-  border-color: #b0a89b;
-  box-shadow: none;
-  background: #faf8f5;
-}
-
-.pc-add-icon {
-  font-size: 24px;
-  color: #c5bdb2;
-}
-
-.pc-add-label {
-  font-size: 14px;
-  color: #b0a89b;
 }
 
 /* ---- 新建弹窗 ---- */

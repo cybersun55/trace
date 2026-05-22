@@ -584,7 +584,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   loadDocument: (doc) => set({ document: doc }),
   getDocument: () => get().document,
-  initDocument: (doc) => set({ document: doc, selection: null, activeFormats: {} }),
+  initDocument: (doc) => set({ document: doc, selection: null, activeFormats: {}, hideDeleted: false }),
 }));
 
 

@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import { useProjectStore } from './store';
-import { updateChapterTitle } from './storage/projects';
+import { updateChapterTitle, loadTOC } from './storage/projects';
 
 
 export default function ChapterSidebar() {
@@ -44,8 +44,6 @@ export default function ChapterSidebar() {
     const t = editVal.trim();
     if (t && activeProject) {
       await updateChapterTitle(activeProject.id, id, t);
-      // Refresh local chapters list
-      const { loadTOC } = await import('./storage/projects');
       const toc = await loadTOC(activeProject.id);
       if (toc) useProjectStore.setState({ chapters: toc.chapters });
     }
