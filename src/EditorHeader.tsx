@@ -140,14 +140,6 @@ export default function EditorHeader() {
               </DropdownOverlay>
             )}
           </div>
-
-          <button
-            className="eh-clear-btn"
-            onClick={() => useEditorStore.getState().toggleHideDeleted()}
-            title="清屏（Tab）"
-          >
-            清屏
-          </button>
         </div>
       </div>
 

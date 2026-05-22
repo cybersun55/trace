@@ -863,20 +863,15 @@ body {
   gap: 6px;
 }
 
-.eh-clear-btn {
-  padding: 3px 8px;
-  border: 1px solid #d4cec0;
-  border-radius: 4px;
-  background: transparent;
-  color: #8c8276;
-  font-size: 11px;
-  cursor: pointer;
-  font-family: inherit;
-  white-space: nowrap;
-  transition: background 0.1s;
-  line-height: 1.5;
+.hint {
+  font-size: 13px;
+  color: #b0a89b;
+  margin-bottom: 20px;
+  line-height: 1.6;
+  text-align: center;
+  user-select: none;
 }
-.eh-clear-btn:hover { background: #f0ede6; color: #4a4238; }
+.hint b { font-weight: 500; color: #8c8276; }
 
 /* ---- 编辑器主体（侧边栏 + 编辑区）---- */
 

@@ -27,6 +27,9 @@ export default function EditorLayout() {
   return (
     <div className="app">
       <EditorHeader />
+      <div className="hint">
+        Backspace <b>删除留痕</b> | Shift+Backspace <b>真删除</b> | Enter 换段 | Ctrl+B/I 格式 | Tab 清屏
+      </div>
       <div className="el-body">
         <ChapterSidebar />
         <div className="el-editor">

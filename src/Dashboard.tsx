@@ -55,6 +55,8 @@ export default function Dashboard() {
         <div className="db-title">推敲 Trace</div>
       </div>
 
+      <div className="app-divider" />
+
       {opfsOk && (
         <div className="db-toolbar">
           <button className="app-btn" onClick={() => setNewDialog(true)}>
@@ -65,8 +67,6 @@ export default function Dashboard() {
           </button>
         </div>
       )}
-
-      <div className="app-divider" />
 
       {!opfsOk && (
         <div className="db-error">
