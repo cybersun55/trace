@@ -120,6 +120,7 @@ const LINE_HEIGHTS = ['1.6', '1.8', '2.0', '2.2'];
 
 function LineHeightPicker({ onSelect }: { onSelect: (lh: string | undefined) => void }) {
   const [open, setOpen] = useState(false);
+  const [custom, setCustom] = useState('');
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -130,6 +131,15 @@ function LineHeightPicker({ onSelect }: { onSelect: (lh: string | undefined) => 
     document.addEventListener('mousedown', onDown);
     return () => document.removeEventListener('mousedown', onDown);
   }, [open]);
+
+  const handleCustom = () => {
+    const v = custom.trim();
+    if (v && /^[\d.]+$/.test(v)) {
+      onSelect(v);
+      setCustom('');
+      setOpen(false);
+    }
+  };
 
   return (
     <div className="tb-font-picker" ref={ref}>
@@ -148,9 +158,16 @@ function LineHeightPicker({ onSelect }: { onSelect: (lh: string | undefined) => 
               {lh} 倍
             </div>
           ))}
-          <button className="font-clear" onMouseDown={(e) => { e.preventDefault(); onSelect(undefined); setOpen(false); }}>
-            清除行距
-          </button>
+          <div className="font-custom-row">
+            <input
+              type="text"
+              value={custom}
+              placeholder="如 2.5"
+              onChange={(e) => setCustom(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleCustom()}
+            />
+            <button onMouseDown={(e) => { e.preventDefault(); handleCustom(); }}>确定</button>
+          </div>
         </div>
       )}
     </div>

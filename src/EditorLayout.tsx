@@ -1,5 +1,6 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useEditorStore } from './store';
+import { loadSettings } from './settings';
 import Editor from './Editor';
 import EditorHeader from './EditorHeader';
 import ChapterSidebar from './ChapterSidebar';
@@ -23,13 +24,31 @@ function computeStats(doc: import('./types').Document) {
 export default function EditorLayout() {
   const doc = useEditorStore((s) => s.document);
   const stats = useMemo(() => computeStats(doc), [doc]);
+  const [hideHints, setHideHints] = useState(false);
+  const [hintHtml, setHintHtml] = useState('');
+
+  // Build hint from shortcut settings
+  useEffect(() => {
+    const s = loadSettings();
+    setHideHints(s.hideHints);
+    const parts = s.shortcuts
+      .filter((sc) => ['softDelete', 'hardDelete', 'splitParagraph', 'toggleBold', 'toggleItalic', 'toggleHideDeleted'].includes(sc.id))
+      .map((sc) => {
+        if (sc.id === 'toggleBold') return `<span>${sc.keys}</span> / <span>${s.shortcuts.find(x => x.id === 'toggleItalic')?.keys || 'Ctrl+I'}</span> <b>格式</b>`;
+        if (sc.id === 'toggleItalic') return null; // combined with toggleBold
+        return `<span>${sc.keys}</span> <b>${sc.label}</b>`;
+      })
+      .filter(Boolean)
+      .join(' | ');
+    setHintHtml(parts);
+  }, []);
 
   return (
     <div className="app">
       <EditorHeader />
-      <div className="hint">
-        Backspace <b>删除留痕</b> | Shift+Backspace <b>真删除</b> | Enter 换段 | Ctrl+B/I 格式 | Tab 清屏
-      </div>
+      {!hideHints && (
+        <div className="hint" dangerouslySetInnerHTML={{ __html: hintHtml }} />
+      )}
       <div className="el-body">
         <ChapterSidebar />
         <div className="el-editor">

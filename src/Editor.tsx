@@ -1,5 +1,6 @@
 import { useRef, useEffect, useCallback } from 'react';
 import { useEditorStore } from './store';
+import { loadSettings } from './settings';
 import ParagraphBlock from './ParagraphBlock';
 import Toolbar from './Toolbar';
 import { exportTracebook, exportTextFile } from './storage';
@@ -35,30 +36,31 @@ export default function Editor() {
       shiftRef.current = e.shiftKey;
 
       const mod = e.metaKey || e.ctrlKey;
+      const settings = loadSettings();
+      const scuts = settings.shortcuts;
 
-      // Tab 切换清屏
-      if (e.key === 'Tab') {
+      // Look up shortcut config: key + modifiers match
+      const match = scuts.find((sc) => {
+        const scMod = sc.ctrlKey;
+        const scShift = sc.shiftKey;
+        const keyMatch = e.key === sc.key || e.key.toLowerCase() === sc.key.toLowerCase();
+        return keyMatch && mod === scMod && e.shiftKey === scShift && !['Control', 'Shift', 'Meta', 'Alt'].includes(e.key);
+      });
+
+      if (match) {
         e.preventDefault();
-        storeToggleHide();
-        return;
+        switch (match.id) {
+          case 'toggleHideDeleted': storeToggleHide(); return;
+          case 'toggleBold': storeToggleBold(); return;
+          case 'toggleItalic': storeToggleItalic(); return;
+        }
       }
 
-      if (mod && !e.shiftKey) {
-        if (e.key === 'b' || e.key === 'B') {
-          e.preventDefault();
-          storeToggleBold();
-          return;
-        }
-        if (e.key === 'i' || e.key === 'I') {
-          e.preventDefault();
-          storeToggleItalic();
-          return;
-        }
-        if (e.key === 's' || e.key === 'S') {
-          e.preventDefault();
-          exportTracebook(useEditorStore.getState().document);
-          return;
-        }
+      // Quick save: Ctrl+S (not in user shortcuts, always available)
+      if (mod && !e.shiftKey && (e.key === 's' || e.key === 'S')) {
+        e.preventDefault();
+        exportTracebook(useEditorStore.getState().document);
+        return;
       }
 
       if (mod && e.shiftKey && (e.key === 's' || e.key === 'S')) {
