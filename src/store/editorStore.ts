@@ -249,6 +249,7 @@ interface EditorState {
   toggleItalic: () => void;
   setColor: (color: string | undefined) => void;
   setFontSize: (size: string | undefined) => void;
+  setLineHeight: (lh: string | undefined) => void;
 
   insertText: (text: string) => void;
   softDelete: (direction: 'backward' | 'forward') => void;
@@ -324,6 +325,19 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const next = { ...activeFormats };
     if (size) next.fontSize = size; else delete next.fontSize;
     set({ activeFormats: next });
+  },
+  setLineHeight: (lh) => {
+    const { document, selection } = get();
+    if (!selection) return;
+    const paraId = selection.paragraphId;
+    set((s) => ({
+      document: {
+        ...s.document,
+        paragraphs: s.document.paragraphs.map((p) =>
+          p.id === paraId ? { ...p, lineHeight: lh } : p,
+        ),
+      },
+    }));
   },
 
   insertText: (text) => {

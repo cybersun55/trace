@@ -13,8 +13,12 @@ export default function App() {
   const openProject = useProjectStore((s) => s.openProject);
   const loadProjectList = useProjectStore((s) => s.loadProjectList);
 
-  // On mount: run migration, check crash recovery, load project list
+  // On mount: apply theme, run migration, check crash recovery, load project list
   useEffect(() => {
+    // 0. Apply saved theme
+    const theme = localStorage.getItem('trace_theme') || 'warm';
+    document.documentElement.setAttribute('data-theme', theme);
+
     (async () => {
       // 1. Migrate legacy localStorage data to OPFS
       try {

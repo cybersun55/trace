@@ -1,6 +1,6 @@
 // PRD Section 3.1 核心数据接口
 
-export type AllowedStyles = { bold?: boolean; italic?: boolean; color?: string; fontSize?: string };
+export type AllowedStyles = { bold?: boolean; italic?: boolean; color?: string; fontSize?: string; lineHeight?: string };
 export type TraceStatus = 'normal' | 'deleted';
 
 export interface TextSpan {
@@ -20,6 +20,7 @@ export type InlineNode = TextSpan | SoftBreakSpan;
 export interface Paragraph {
   id: string;
   children: InlineNode[];
+  lineHeight?: string;
 }
 
 export interface Document {

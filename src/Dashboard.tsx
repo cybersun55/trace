@@ -3,6 +3,7 @@ import { useProjectStore } from './store';
 import { importTracebookFull, isOPFSAvailable } from './storage';
 import ProjectCard from './ProjectCard';
 import NewProjectDialog from './NewProjectDialog';
+import SettingsDialog from './SettingsDialog';
 import type { ProjectType } from './types';
 
 export default function Dashboard() {
@@ -13,6 +14,7 @@ export default function Dashboard() {
 
   const [opfsOk, setOpfsOk] = useState(true);
   const [newDialog, setNewDialog] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   useEffect(() => {
@@ -53,6 +55,7 @@ export default function Dashboard() {
     <div className="app">
       <div className="db-header">
         <div className="db-title">推敲 Trace</div>
+        <button className="gear-btn" onClick={() => setSettingsOpen(true)} title="设置">⚙</button>
       </div>
 
       <div className="app-divider" />
@@ -135,6 +138,8 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      {settingsOpen && <SettingsDialog onClose={() => setSettingsOpen(false)} />}
     </div>
   );
 }

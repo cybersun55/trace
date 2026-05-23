@@ -33,7 +33,9 @@ export default function ParagraphBlock({ paragraph }: Props) {
     ? paragraph.children.map(renderNode).join('')
     : '<span data-len="0">\u200B</span>';
 
+  const paraStyle = paragraph.lineHeight ? { lineHeight: paragraph.lineHeight } : undefined;
+
   return (
-    <div className="paragraph" data-pid={paragraph.id} dangerouslySetInnerHTML={{ __html: html }} />
+    <div className="paragraph" data-pid={paragraph.id} style={paraStyle} dangerouslySetInnerHTML={{ __html: html }} />
   );
 }

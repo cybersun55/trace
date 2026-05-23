@@ -9,6 +9,7 @@ export default function Toolbar() {
   const toggleItalic = useEditorStore((s) => s.toggleItalic);
   const setColor = useEditorStore((s) => s.setColor);
   const setFontSize = useEditorStore((s) => s.setFontSize);
+  const setLineHeight = useEditorStore((s) => s.setLineHeight);
   const selection = useEditorStore((s) => s.selection);
   const activeFormats = useEditorStore((s) => s.activeFormats);
 
@@ -56,6 +57,10 @@ export default function Toolbar() {
 
       <ColorPicker current={activeFormats.color} onSelect={setColor} />
       <FontSizePicker current={activeFormats.fontSize} onSelect={setFontSize} />
+
+      <span className="tb-sep" />
+
+      <LineHeightPicker onSelect={setLineHeight} />
     </div>
   );
 }
@@ -105,6 +110,47 @@ function ColorPicker({ current, onSelect }: { current?: string; onSelect: (c: st
               清除颜色
             </button>
           )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const LINE_HEIGHTS = ['1.6', '1.8', '2.0', '2.2'];
+
+function LineHeightPicker({ onSelect }: { onSelect: (lh: string | undefined) => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [open]);
+
+  return (
+    <div className="tb-font-picker" ref={ref}>
+      <button className="tb-btn" onMouseDown={(e) => { e.preventDefault(); setOpen(!open); }} title="行距">
+        ↕
+      </button>
+      {open && (
+        <div className="font-dropdown">
+          {LINE_HEIGHTS.map((lh) => (
+            <div
+              key={lh}
+              className="font-opt"
+              style={{ lineHeight: lh }}
+              onMouseDown={(e) => { e.preventDefault(); onSelect(lh); setOpen(false); }}
+            >
+              {lh} 倍
+            </div>
+          ))}
+          <button className="font-clear" onMouseDown={(e) => { e.preventDefault(); onSelect(undefined); setOpen(false); }}>
+            清除行距
+          </button>
         </div>
       )}
     </div>

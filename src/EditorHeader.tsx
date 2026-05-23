@@ -4,6 +4,7 @@ import { exportTracebook, exportTextFile, saveBlobWithPicker } from './storage';
 import { exportPlainText, exportWordBlob, exportImageBlob } from './export';
 import { loadChapter } from './storage/projects';
 import CopyModal from './CopyModal';
+import SettingsDialog from './SettingsDialog';
 
 export default function EditorHeader() {
   const doc = useEditorStore((s) => s.document);
@@ -15,6 +16,7 @@ export default function EditorHeader() {
 
   const [exportOpen, setExportOpen] = useState(false);
   const [copyOpen, setCopyOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [versionPick, setVersionPick] = useState<'word' | 'image' | null>(null);
   const [editing, setEditing] = useState(false);
   const [etitle, setEtitle] = useState('');
@@ -195,6 +197,7 @@ export default function EditorHeader() {
         </div>
 
         <div className="eh-actions">
+          <button className="gear-btn" onClick={() => setSettingsOpen(true)} title="设置">⚙</button>
           <div className="app-dropdown">
             <button className="app-btn" onMouseDown={(e) => { e.preventDefault(); setExportOpen(!exportOpen); }}>
               导出 ▾
@@ -235,6 +238,8 @@ export default function EditorHeader() {
       <div className="app-divider" />
 
       {copyOpen && <CopyModal doc={doc} onClose={() => setCopyOpen(false)} />}
+
+      {settingsOpen && <SettingsDialog onClose={() => setSettingsOpen(false)} />}
 
       {versionPick && (
         <div className="vp-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) setVersionPick(null); }}>
