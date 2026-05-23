@@ -1,25 +1,25 @@
 /* ---- CSS Variables / Themes ---- */
 :root, [data-theme="warm"] {
   --bg-body: #f5f0eb;
-  --bg-surface: var(--bg-surface);
-  --text: var(--text);
-  --text-secondary: var(--text-secondary);
-  --text-muted: var(--text-muted);
-  --text-faint: var(--text-faint);
-  --text-faint-2: var(--text-faint-2);
-  --border-light: var(--border-light);
-  --border: var(--border);
-  --bg-hover: var(--bg-hover);
-  --bg-active: var(--border-light);
-  --shadow-sm: var(--shadow-sm);
-  --shadow: var(--shadow);
-  --shadow-lg: var(--shadow-lg);
-  --overlay: var(--overlay);
-  --saved-green: var(--saved-green);
-  --badge-article-bg: var(--badge-article-bg);
-  --badge-article-text: var(--badge-article-text);
-  --badge-book-bg: var(--badge-book-bg);
-  --badge-book-text: var(--badge-book-text);
+  --bg-surface: #fffef9;
+  --text: #2c2c2c;
+  --text-secondary: #4a4238;
+  --text-muted: #8c8276;
+  --text-faint: #b0a89b;
+  --text-faint-2: #c5bdb2;
+  --border-light: #e8e3da;
+  --border: #d4cec0;
+  --bg-hover: #f0ede6;
+  --bg-active: #e8e3da;
+  --shadow-sm: rgba(0,0,0,0.06);
+  --shadow: rgba(0,0,0,0.1);
+  --shadow-lg: rgba(0,0,0,0.18);
+  --overlay: rgba(0,0,0,0.3);
+  --saved-green: #8cbf8c;
+  --badge-article-bg: #e8f4e8;
+  --badge-article-text: #4a8c4a;
+  --badge-book-bg: #e8ecf4;
+  --badge-book-text: #4a6c8c;
 }
 
 [data-theme="light"] {
@@ -36,8 +36,8 @@
   --bg-active: #e5e7eb;
   --shadow-sm: rgba(0,0,0,0.04);
   --shadow: rgba(0,0,0,0.08);
-  --shadow-lg: var(--shadow);
-  --overlay: var(--overlay);
+  --shadow-lg: rgba(0,0,0,0.12);
+  --overlay: rgba(0,0,0,0.3);
   --saved-green: #10b981;
   --badge-article-bg: #ecfdf5;
   --badge-article-text: #059669;
@@ -58,7 +58,7 @@
   --bg-hover: #2e2e48;
   --bg-active: #3a3a58;
   --shadow-sm: rgba(0,0,0,0.2);
-  --shadow: var(--overlay);
+  --shadow: rgba(0,0,0,0.3);
   --shadow-lg: rgba(0,0,0,0.45);
   --overlay: rgba(0,0,0,0.6);
   --saved-green: #4ade80;
@@ -82,7 +82,7 @@
   --bg-active: #dce8c8;
   --shadow-sm: rgba(0,0,0,0.04);
   --shadow: rgba(0,0,0,0.08);
-  --shadow-lg: var(--shadow);
+  --shadow-lg: rgba(0,0,0,0.12);
   --overlay: rgba(0,0,0,0.25);
   --saved-green: #6aaa5a;
   --badge-article-bg: #d8ecce;
