@@ -866,9 +866,9 @@ body {
 .hint {
   font-size: 13px;
   color: #b0a89b;
-  margin-bottom: 20px;
+  margin-top: 6px;
+  margin-bottom: 16px;
   line-height: 1.6;
-  text-align: center;
   user-select: none;
 }
 .hint b { font-weight: 500; color: #8c8276; }
