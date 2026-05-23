@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useEditorStore, useProjectStore } from './store';
-import { exportTracebook, exportBookTracebook, exportTextFile, saveBlobWithPicker } from './storage';
-import { exportPlainText, exportBookPlainText, exportWordBlob, exportBookWordBlob, exportImageBlob, exportBookImageBlob } from './export';
+import { exportTracebook, exportTextFile, saveBlobWithPicker } from './storage';
+import { exportPlainText, exportWordBlob, exportImageBlob } from './export';
 import { loadChapter } from './storage/projects';
 import CopyModal from './CopyModal';
 
@@ -68,73 +68,96 @@ export default function EditorHeader() {
 
   const handleExportTxt = useCallback(async () => {
     const title = activeProject?.title || '写作';
-    const isBook = activeProject?.type === 'book';
-    if (isBook) {
-      const chs = await collectBookChapters();
-      if (chs) await exportTextFile(exportBookPlainText(chs), `${title}（纯净）.txt`);
-    } else {
-      await exportTextFile(exportPlainText(doc), `${title}（纯净）.txt`);
-    }
+    await exportTextFile(exportPlainText(doc), `${title}（纯净）.txt`);
     setExportOpen(false);
-  }, [doc, activeProject, collectBookChapters]);
+  }, [doc, activeProject]);
 
   const handleExportTracebook = useCallback(async () => {
     const title = activeProject?.title || '写作';
-    const isBook = activeProject?.type === 'book';
-    if (isBook && activeProject) {
+    await exportTracebook(doc, `${title}.tracebook`);
+    setExportOpen(false);
+  }, [doc, activeProject]);
+
+  // Book: export each chapter as a separate .doc file inside a folder
+  const exportBookToFolder = useCallback(async (clean: boolean) => {
+    const mode = clean ? 'clean' : 'trace';
+    const title = activeProject?.title || '写作';
+    const suffix = clean ? '（纯净）' : '（原版）';
+
+    // Try directory picker; fall back to single merged file
+    let dirHandle: FileSystemDirectoryHandle;
+    try {
+      dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+    } catch {
+      // User cancelled or API unavailable — fall back to merged .doc
       const chs = await collectBookChapters();
       if (chs) {
-        const chMap = new Map(chs.map(c => [c.id, c.doc]));
-        await exportBookTracebook(activeProject, chapters, chMap);
+        // Merged fallback
+        const parts: string[] = [];
+        for (const ch of chs) {
+          parts.push(ch.title);
+          parts.push(exportPlainText(ch.doc));
+        }
+        await saveBlobWithPicker({
+          blob: new Blob([parts.join('\n\n')], { type: 'application/msword;charset=utf-8' }),
+          suggestedName: `${title}${suffix}.doc`,
+          mimeType: 'application/msword',
+          extension: '.doc',
+        });
       }
-    } else {
-      await exportTracebook(doc, `${title}.tracebook`);
+      setExportOpen(false);
+      return;
     }
+
+    // Create book folder
+    const safeName = title.replace(/[/\\?%*:|"<>]/g, '_');
+    const bookDir = await dirHandle.getDirectoryHandle(safeName, { create: true });
+
+    const chs = await collectBookChapters();
+    if (!chs) { setExportOpen(false); return; }
+
+    for (let i = 0; i < chs.length; i++) {
+      const ch = chs[i];
+      const num = String(i + 1).padStart(2, '0');
+      const chName = `${num}_${ch.title.replace(/[/\\?%*:|"<>]/g, '_')}`;
+      const blob = exportWordBlob(ch.doc, mode);
+      const fileHandle = await bookDir.getFileHandle(`${chName}.doc`, { create: true });
+      const writable = await fileHandle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+    }
+
     setExportOpen(false);
-  }, [doc, activeProject, chapters, collectBookChapters]);
+  }, [activeProject, collectBookChapters]);
 
   const doExportWord = useCallback(async (clean: boolean) => {
     const mode = clean ? 'clean' : 'trace';
     const title = activeProject?.title || '写作';
     const suffix = clean ? '（纯净）' : '（原版）';
-    const isBook = activeProject?.type === 'book';
-    if (isBook) {
-      const chs = await collectBookChapters();
-      if (chs) {
-        const blob = exportBookWordBlob(chs, mode);
-        await saveBlobWithPicker({ blob, suggestedName: `${title}${suffix}.doc`, mimeType: 'application/msword', extension: '.doc' });
-      }
-    } else {
-      const blob = exportWordBlob(doc, mode);
-      await saveBlobWithPicker({ blob, suggestedName: `${title}${suffix}.doc`, mimeType: 'application/msword', extension: '.doc' });
-    }
+    const blob = exportWordBlob(doc, mode);
+    await saveBlobWithPicker({ blob, suggestedName: `${title}${suffix}.doc`, mimeType: 'application/msword', extension: '.doc' });
     setExportOpen(false);
-  }, [doc, activeProject, collectBookChapters]);
+  }, [doc, activeProject]);
 
   const doExportImage = useCallback(async (clean: boolean) => {
     const mode = clean ? 'clean' : 'trace';
     const title = activeProject?.title || '写作';
     const suffix = clean ? '（纯净）' : '（原版）';
-    const isBook = activeProject?.type === 'book';
-    if (isBook) {
-      const chs = await collectBookChapters();
-      if (chs) {
-        const blob = await exportBookImageBlob(chs, mode);
-        await saveBlobWithPicker({ blob, suggestedName: `${title}${suffix}.png`, mimeType: 'image/png', extension: '.png' });
-      }
-    } else {
-      const blob = await exportImageBlob(doc, mode);
-      await saveBlobWithPicker({ blob, suggestedName: `${title}${suffix}.png`, mimeType: 'image/png', extension: '.png' });
-    }
+    const blob = await exportImageBlob(doc, mode);
+    await saveBlobWithPicker({ blob, suggestedName: `${title}${suffix}.png`, mimeType: 'image/png', extension: '.png' });
     setExportOpen(false);
-  }, [doc, activeProject, collectBookChapters]);
+  }, [doc, activeProject]);
 
   const handleVersionPick = useCallback((clean: boolean) => {
     const kind = versionPick;
     setVersionPick(null);
-    if (kind === 'word') doExportWord(clean);
-    else if (kind === 'image') doExportImage(clean);
-  }, [versionPick, doExportWord, doExportImage]);
+    if (kind === 'word') {
+      if (activeProject?.type === 'book') exportBookToFolder(clean);
+      else doExportWord(clean);
+    } else if (kind === 'image') {
+      doExportImage(clean);
+    }
+  }, [versionPick, activeProject, exportBookToFolder, doExportWord, doExportImage]);
 
   const isBook = activeProject?.type === 'book';
   const currentChapter = chapters.find(c => c.id === activeChapterId);
@@ -182,19 +205,26 @@ export default function EditorHeader() {
                   <button className="dropdown-item" onMouseDown={(e) => { e.preventDefault(); handleCopy(); }}>
                     复制
                   </button>
+                  {!isBook && (
+                    <>
+                      <div className="dropdown-sep" />
+                      <button className="dropdown-item" onMouseDown={(e) => { e.preventDefault(); handleExportTxt(); }}>
+                        纯文本 (.txt)
+                      </button>
+                      <button className="dropdown-item" onMouseDown={(e) => { e.preventDefault(); handleExportTracebook(); }}>
+                        源文件 (.tracebook)
+                      </button>
+                    </>
+                  )}
                   <div className="dropdown-sep" />
-                  <button className="dropdown-item" onMouseDown={(e) => { e.preventDefault(); handleExportTxt(); }}>
-                    纯文本 (.txt)
-                  </button>
-                  <button className="dropdown-item" onMouseDown={(e) => { e.preventDefault(); handleExportTracebook(); }}>
-                    源文件 (.tracebook)
-                  </button>
                   <button className="dropdown-item" onMouseDown={(e) => { e.preventDefault(); setExportOpen(false); setVersionPick('word'); }}>
                     Word 文档 (.doc)
                   </button>
-                  <button className="dropdown-item" onMouseDown={(e) => { e.preventDefault(); setExportOpen(false); setVersionPick('image'); }}>
-                    图片 (.png)
-                  </button>
+                  {!isBook && (
+                    <button className="dropdown-item" onMouseDown={(e) => { e.preventDefault(); setExportOpen(false); setVersionPick('image'); }}>
+                      图片 (.png)
+                    </button>
+                  )}
                 </div>
               </DropdownOverlay>
             )}
