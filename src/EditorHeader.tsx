@@ -1,7 +1,8 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useEditorStore, useProjectStore } from './store';
-import { exportTracebook, exportTextFile, saveBlobWithPicker } from './storage';
-import { exportPlainText, exportWordBlob, exportImageBlob } from './export';
+import { exportTracebook, exportBookTracebook, exportTextFile, saveBlobWithPicker } from './storage';
+import { exportPlainText, exportBookPlainText, exportWordBlob, exportBookWordBlob, exportImageBlob, exportBookImageBlob } from './export';
+import { loadChapter } from './storage/projects';
 import CopyModal from './CopyModal';
 
 export default function EditorHeader() {
@@ -35,6 +36,31 @@ export default function EditorHeader() {
     setEditing(false);
   }, [etitle, activeProject, renameProject]);
 
+  interface ChapterData {
+    id: string;
+    title: string;
+    doc: import('./types').Document;
+  }
+
+  // Gather all chapter docs for book-level export
+  const collectBookChapters = useCallback(async (): Promise<ChapterData[] | null> => {
+    const project = activeProject;
+    if (!project || project.type !== 'book') return null;
+    const chs = chapters;
+    const chId = activeChapterId;
+    const currentDoc = useEditorStore.getState().document;
+    const result: ChapterData[] = [];
+    for (const ch of chs) {
+      if (ch.id === chId) {
+        result.push({ id: ch.id, title: ch.title, doc: currentDoc });
+      } else {
+        const d = await loadChapter(project.id, ch.id, 'book');
+        if (d) result.push({ id: ch.id, title: ch.title, doc: d });
+      }
+    }
+    return result;
+  }, [activeProject, chapters, activeChapterId]);
+
   const handleCopy = useCallback(() => {
     setCopyOpen(true);
     setExportOpen(false);
@@ -42,33 +68,66 @@ export default function EditorHeader() {
 
   const handleExportTxt = useCallback(async () => {
     const title = activeProject?.title || '写作';
-    await exportTextFile(exportPlainText(doc), `${title}（纯净）.txt`);
+    const isBook = activeProject?.type === 'book';
+    if (isBook) {
+      const chs = await collectBookChapters();
+      if (chs) await exportTextFile(exportBookPlainText(chs), `${title}（纯净）.txt`);
+    } else {
+      await exportTextFile(exportPlainText(doc), `${title}（纯净）.txt`);
+    }
     setExportOpen(false);
-  }, [doc, activeProject]);
+  }, [doc, activeProject, collectBookChapters]);
 
   const handleExportTracebook = useCallback(async () => {
     const title = activeProject?.title || '写作';
-    await exportTracebook(doc, `${title}.tracebook`);
+    const isBook = activeProject?.type === 'book';
+    if (isBook && activeProject) {
+      const chs = await collectBookChapters();
+      if (chs) {
+        const chMap = new Map(chs.map(c => [c.id, c.doc]));
+        await exportBookTracebook(activeProject, chapters, chMap);
+      }
+    } else {
+      await exportTracebook(doc, `${title}.tracebook`);
+    }
     setExportOpen(false);
-  }, [doc, activeProject]);
+  }, [doc, activeProject, chapters, collectBookChapters]);
 
   const doExportWord = useCallback(async (clean: boolean) => {
     const mode = clean ? 'clean' : 'trace';
     const title = activeProject?.title || '写作';
     const suffix = clean ? '（纯净）' : '（原版）';
-    const blob = exportWordBlob(doc, mode);
-    await saveBlobWithPicker({ blob, suggestedName: `${title}${suffix}.doc`, mimeType: 'application/msword', extension: '.doc' });
+    const isBook = activeProject?.type === 'book';
+    if (isBook) {
+      const chs = await collectBookChapters();
+      if (chs) {
+        const blob = exportBookWordBlob(chs, mode);
+        await saveBlobWithPicker({ blob, suggestedName: `${title}${suffix}.doc`, mimeType: 'application/msword', extension: '.doc' });
+      }
+    } else {
+      const blob = exportWordBlob(doc, mode);
+      await saveBlobWithPicker({ blob, suggestedName: `${title}${suffix}.doc`, mimeType: 'application/msword', extension: '.doc' });
+    }
     setExportOpen(false);
-  }, [doc, activeProject]);
+  }, [doc, activeProject, collectBookChapters]);
 
   const doExportImage = useCallback(async (clean: boolean) => {
     const mode = clean ? 'clean' : 'trace';
     const title = activeProject?.title || '写作';
     const suffix = clean ? '（纯净）' : '（原版）';
-    const blob = await exportImageBlob(doc, mode);
-    await saveBlobWithPicker({ blob, suggestedName: `${title}${suffix}.png`, mimeType: 'image/png', extension: '.png' });
+    const isBook = activeProject?.type === 'book';
+    if (isBook) {
+      const chs = await collectBookChapters();
+      if (chs) {
+        const blob = await exportBookImageBlob(chs, mode);
+        await saveBlobWithPicker({ blob, suggestedName: `${title}${suffix}.png`, mimeType: 'image/png', extension: '.png' });
+      }
+    } else {
+      const blob = await exportImageBlob(doc, mode);
+      await saveBlobWithPicker({ blob, suggestedName: `${title}${suffix}.png`, mimeType: 'image/png', extension: '.png' });
+    }
     setExportOpen(false);
-  }, [doc, activeProject]);
+  }, [doc, activeProject, collectBookChapters]);
 
   const handleVersionPick = useCallback((clean: boolean) => {
     const kind = versionPick;
