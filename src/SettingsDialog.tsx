@@ -3,22 +3,23 @@ import {
   type Theme, type Lang, type ShortcutDef, type FontEntry,
   loadSettings, saveSettings, applyTheme, applyPageWidth, applyEditorFont,
   getTheme, DEFAULT_SHORTCUTS, PRESET_FONTS, PAGE_WIDTHS,
-  loadFontList, importFontFile, removeFont, initFonts,
+  loadFontList, importFontFile, removeFont,
 } from './settings';
+import { useT, notifyLangChange, t as translate } from './i18n';
 
 interface Props { onClose: () => void; }
 
-const THEME_LABELS: Record<Theme, string> = { warm: '暖黄', light: '浅色', dark: '深色', eye: '护眼' };
-
 type Tab = 'general' | 'editor' | 'shortcuts' | 'data' | 'about';
 
-const TABS: { id: Tab; label: string }[] = [
-  { id: 'general', label: '通用' },
-  { id: 'editor', label: '编辑器' },
-  { id: 'shortcuts', label: '快捷键' },
-  { id: 'data', label: '数据' },
-  { id: 'about', label: '关于' },
-];
+function getTabs(lang: Lang): { id: Tab; label: string }[] {
+  return [
+    { id: 'general', label: translate('settings.general', lang) },
+    { id: 'editor', label: translate('settings.editor', lang) },
+    { id: 'shortcuts', label: translate('settings.shortcuts', lang) },
+    { id: 'data', label: translate('settings.data', lang) },
+    { id: 'about', label: translate('settings.about', lang) },
+  ];
+}
 
 export default function SettingsDialog({ onClose }: Props) {
   const [settings, setSettings] = useState(() => loadSettings());
@@ -28,6 +29,8 @@ export default function SettingsDialog({ onClose }: Props) {
   const [fonts, setFonts] = useState<FontEntry[]>(loadFontList);
   const [recording, setRecording] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const tt = useT();
+  const lang = settings.lang;
 
   // Apply theme immediately
   const handleTheme = useCallback((t: Theme) => {
@@ -41,6 +44,7 @@ export default function SettingsDialog({ onClose }: Props) {
       saveSettings(next);
       return next;
     });
+    notifyLangChange();
   }, []);
 
   // Page width
@@ -110,8 +114,9 @@ export default function SettingsDialog({ onClose }: Props) {
   }, []);
 
   // Clear all data
+  const clearWord = lang === 'zh' ? '删除' : 'delete';
   const handleClearAll = useCallback(async () => {
-    if (clearInput !== '删除') return;
+    if (clearInput !== clearWord) return;
     try {
       const root = await navigator.storage.getDirectory();
       try { await root.removeEntry('projects', { recursive: true }); } catch {}
@@ -120,7 +125,7 @@ export default function SettingsDialog({ onClose }: Props) {
     localStorage.clear();
     setClearDone(true);
     setTimeout(() => window.location.reload(), 800);
-  }, [clearInput]);
+  }, [clearInput, clearWord]);
 
   // Listen for key recording
   useEffect(() => {
@@ -170,7 +175,7 @@ export default function SettingsDialog({ onClose }: Props) {
     <div className="st-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="st-dialog">
         <div className="st-sidebar">
-          {TABS.map((t) => (
+          {getTabs(lang).map((t) => (
             <button
               key={t.id}
               className={`st-tab-btn${tab === t.id ? ' active' : ''}`}
@@ -182,28 +187,27 @@ export default function SettingsDialog({ onClose }: Props) {
         </div>
 
         <div className="st-content">
-          {/* ---- 通用 ---- */}
           {tab === 'general' && (
             <div className="st-section">
-              <h3 className="st-section-title">通用</h3>
+              <h3 className="st-section-title">{tt('settings.general')}</h3>
               <div className="st-row">
-                <span className="st-label">语言</span>
+                <span className="st-label">{tt('settings.lang')}</span>
                 <div className="st-toggle-group">
-                  <button className={`st-toggle${settings.lang === 'zh' ? ' active' : ''}`} onClick={() => handleLang('zh')}>中文</button>
-                  <button className={`st-toggle${settings.lang === 'en' ? ' active' : ''}`} onClick={() => handleLang('en')}>English</button>
+                  <button className={`st-toggle${lang === 'zh' ? ' active' : ''}`} onClick={() => handleLang('zh')}>中文</button>
+                  <button className={`st-toggle${lang === 'en' ? ' active' : ''}`} onClick={() => handleLang('en')}>English</button>
                 </div>
               </div>
               <div className="st-row">
-                <span className="st-label">主题</span>
+                <span className="st-label">{tt('settings.theme')}</span>
                 <div className="st-theme-grid">
-                  {(Object.keys(THEME_LABELS) as Theme[]).map((t) => (
+                  {(['warm', 'light', 'dark', 'eye'] as Theme[]).map((t) => (
                     <button
                       key={t}
                       className={`st-theme-card${settings.theme === t ? ' active' : ''}`}
                       onClick={() => handleTheme(t)}
                     >
                       <div className={`st-theme-swatch st-theme-${t}`} />
-                      <span>{THEME_LABELS[t]}</span>
+                      <span>{tt(`settings.theme.${t}`)}</span>
                     </button>
                   ))}
                 </div>
@@ -211,13 +215,12 @@ export default function SettingsDialog({ onClose }: Props) {
             </div>
           )}
 
-          {/* ---- 编辑器 ---- */}
           {tab === 'editor' && (
             <div className="st-section">
-              <h3 className="st-section-title">编辑器</h3>
+              <h3 className="st-section-title">{tt('settings.editor')}</h3>
 
               <div className="st-setting-block">
-                <div className="st-label">字体</div>
+                <div className="st-label">{tt('settings.font')}</div>
                 <div className="st-font-list">
                   {allFonts.map((f) => (
                     <button
@@ -233,20 +236,20 @@ export default function SettingsDialog({ onClose }: Props) {
                         <span
                           className="st-font-del"
                           onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); handleFontRemove(f.label); }}
-                          title="删除此字体"
+                          title="×"
                         >✕</span>
                       )}
                     </button>
                   ))}
                 </div>
-                <button className="app-btn" onClick={handleFontImport} style={{ marginTop: 8 }}>
-                  导入字体 (.ttf/.otf/.woff2)
+                <button className="st-font-opt st-font-import" onClick={handleFontImport}>
+                  {tt('settings.fontImport')}
                 </button>
                 <input ref={fileRef} type="file" accept=".ttf,.otf,.woff2,.woff" style={{ display: 'none' }} onChange={handleFontFile} />
               </div>
 
               <div className="st-setting-block">
-                <div className="st-label">页面宽度</div>
+                <div className="st-label">{tt('settings.pageWidth')}</div>
                 <div className="st-toggle-group" style={{ marginBottom: 8 }}>
                   {PAGE_WIDTHS.map((pw) => (
                     <button
@@ -262,7 +265,7 @@ export default function SettingsDialog({ onClose }: Props) {
                   <input
                     className="st-custom-input"
                     type="text"
-                    placeholder="自定义 px"
+                    placeholder={lang === 'zh' ? '自定义 px' : 'Custom px'}
                     value={PAGE_WIDTHS.some(p => p.value === settings.pageWidth) ? '' : settings.pageWidth.replace('px', '')}
                     onChange={(e) => {
                       const v = e.target.value;
@@ -277,10 +280,9 @@ export default function SettingsDialog({ onClose }: Props) {
             </div>
           )}
 
-          {/* ---- 快捷键 ---- */}
           {tab === 'shortcuts' && (
             <div className="st-section">
-              <h3 className="st-section-title">快捷键</h3>
+              <h3 className="st-section-title">{tt('settings.shortcuts')}</h3>
 
               <div className="st-row" style={{ marginBottom: 12 }}>
                 <label className="st-checkbox-label">
@@ -289,22 +291,22 @@ export default function SettingsDialog({ onClose }: Props) {
                     checked={settings.hideHints}
                     onChange={handleHideHints}
                   />
-                  <span>隐藏编辑器操作提示</span>
+                  <span>{tt('settings.hideHints')}</span>
                 </label>
-                <button className="app-btn" onClick={handleShortcutReset}>恢复默认</button>
+                <button className="app-btn" onClick={handleShortcutReset}>{tt('settings.resetShortcuts')}</button>
               </div>
 
               <table className="st-shortcut-table">
                 <thead>
-                  <tr><th>功能</th><th>按键</th><th></th></tr>
+                  <tr><th>{lang === 'zh' ? '功能' : 'Action'}</th><th>{lang === 'zh' ? '按键' : 'Key'}</th><th></th></tr>
                 </thead>
                 <tbody>
                   {settings.shortcuts.map((sc) => (
                     <tr key={sc.id}>
-                      <td>{sc.label}</td>
+                      <td>{tt(`sc.${sc.id}`)}</td>
                       <td>
                         {recording === sc.id ? (
-                          <span className="st-recording">按下新按键...</span>
+                          <span className="st-recording">{tt('settings.recording')}</span>
                         ) : (
                           <kbd>{sc.keys}</kbd>
                         )}
@@ -315,7 +317,7 @@ export default function SettingsDialog({ onClose }: Props) {
                           style={{ padding: '2px 8px', fontSize: 11 }}
                           onClick={() => handleShortcutEdit(sc.id)}
                         >
-                          {recording === sc.id ? '录制中...' : '编辑'}
+                          {recording === sc.id ? tt('settings.recordingBtn') : tt('settings.edit')}
                         </button>
                       </td>
                     </tr>
@@ -325,47 +327,45 @@ export default function SettingsDialog({ onClose }: Props) {
             </div>
           )}
 
-          {/* ---- 数据 ---- */}
           {tab === 'data' && (
             <div className="st-section">
-              <h3 className="st-section-title">数据管理</h3>
+              <h3 className="st-section-title">{tt('settings.data')}</h3>
               <div className="st-row">
-                <span className="st-label">清除所有数据</span>
-                <span className="st-hint">此操作不可恢复，将删除所有作品和设置</span>
+                <span className="st-label">{tt('settings.clearData')}</span>
+                <span className="st-hint">{tt('settings.clearHint')}</span>
               </div>
               {!clearDone ? (
                 <div className="st-clear-row">
                   <input
                     className="st-clear-input"
-                    placeholder="输入「删除」确认"
+                    placeholder={tt('settings.clearPlaceholder')}
                     value={clearInput}
                     onChange={(e) => setClearInput(e.target.value)}
                   />
                   <button
                     className="app-btn"
-                    style={{ color: clearInput === '删除' ? '#e74c3c' : undefined }}
+                    style={{ color: clearInput === clearWord ? '#e74c3c' : undefined }}
                     onClick={handleClearAll}
                   >
-                    确认清除
+                    {tt('settings.clearBtn')}
                   </button>
                 </div>
               ) : (
-                <div className="st-clear-done">数据已清除，即将刷新页面...</div>
+                <div className="st-clear-done">{tt('settings.clearDone')}</div>
               )}
             </div>
           )}
 
-          {/* ---- 关于 ---- */}
           {tab === 'about' && (
             <div className="st-section">
-              <h3 className="st-section-title">关于 推敲 Trace</h3>
+              <h3 className="st-section-title">{translate('app.title', lang)}</h3>
               <div className="st-about">
-                <p>推敲 Trace — 一个支持留痕修订的写作编辑器。</p>
-                <p>删除的文字不会立即消失，而是以删除线标记，让你看清每一处修改。</p>
+                <p>{tt('settings.aboutText1')}</p>
+                <p>{tt('settings.aboutText2')}</p>
                 <div className="st-meta">
-                  <div><span>版本</span><span>1.0.0</span></div>
-                  <div><span>许可</span><span>MIT</span></div>
-                  <div><span>技术</span><span>React + Zustand + OPFS</span></div>
+                  <div><span>{tt('settings.version')}</span><span>1.0.0</span></div>
+                  <div><span>{tt('settings.license')}</span><span>MIT</span></div>
+                  <div><span>{tt('settings.tech')}</span><span>React + Zustand + OPFS</span></div>
                 </div>
               </div>
             </div>

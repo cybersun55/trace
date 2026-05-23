@@ -4,6 +4,7 @@ import { importTracebookFull, isOPFSAvailable } from './storage';
 import ProjectCard from './ProjectCard';
 import NewProjectDialog from './NewProjectDialog';
 import SettingsDialog from './SettingsDialog';
+import { useT } from './i18n';
 import type { ProjectType } from './types';
 
 export default function Dashboard() {
@@ -12,6 +13,7 @@ export default function Dashboard() {
     loadProjectList, openProject, createProject, deleteProject, renameProject,
   } = useProjectStore();
 
+  const tt = useT();
   const [opfsOk, setOpfsOk] = useState(true);
   const [newDialog, setNewDialog] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -54,8 +56,8 @@ export default function Dashboard() {
   return (
     <div className="app">
       <div className="db-header">
-        <div className="db-title">推敲 Trace</div>
-        <button className="gear-btn" onClick={() => setSettingsOpen(true)} title="设置">⚙</button>
+        <div className="db-title">{tt('app.title')}</div>
+        <button className="gear-btn" onClick={() => setSettingsOpen(true)} title={tt('eh.settings')}>⚙</button>
       </div>
 
       <div className="app-divider" />
@@ -63,10 +65,10 @@ export default function Dashboard() {
       {opfsOk && (
         <div className="db-toolbar">
           <button className="app-btn" onClick={() => setNewDialog(true)}>
-            新建
+            {tt('db.new')}
           </button>
           <button className="app-btn" onClick={handleImport}>
-            导入 .tracebook
+            {tt('db.import')}
           </button>
         </div>
       )}
@@ -95,7 +97,7 @@ export default function Dashboard() {
 
       {opfsOk && !isLoading && !error && projects.length === 0 && (
         <div className="db-empty">
-          <span className="db-empty-text">还没有作品</span>
+          <span className="db-empty-text">{tt('db.empty')}</span>
         </div>
       )}
 
@@ -123,16 +125,16 @@ export default function Dashboard() {
       {deleteConfirm && (
         <div className="vp-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) setDeleteConfirm(null); }}>
           <div className="vp-dialog">
-            <div className="vp-title">确定删除此作品？</div>
+            <div className="vp-title">{tt('db.deleteConfirm')}</div>
             <p style={{ fontSize: '13px', color: '#8c8276', marginBottom: '16px' }}>
-              删除后无法恢复
+              {tt('db.deleteWarning')}
             </p>
             <div className="vp-buttons">
               <button className="vp-btn vp-btn-trace" onMouseDown={(e) => { e.preventDefault(); handleDelete(deleteConfirm); }}>
-                删除
+                {tt('db.delete')}
               </button>
               <button className="vp-btn vp-btn-clean" onMouseDown={(e) => { e.preventDefault(); setDeleteConfirm(null); }}>
-                取消
+                {tt('db.cancel')}
               </button>
             </div>
           </div>

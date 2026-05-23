@@ -246,7 +246,7 @@ body {
 .app-divider {
   height: 1px;
   background: var(--border-light);
-  margin: 8px 0 10px;
+  margin: 8px 0 4px;
 }
 
 /* ---- 编辑器容器 ---- */
@@ -640,7 +640,7 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 4px 0;
+  padding: 0;
 }
 
 .db-loading {
@@ -1473,6 +1473,12 @@ body {
   padding: 0 2px;
 }
 .st-font-del:hover { color: #e74c3c; }
+
+.st-font-import {
+  border-style: dashed;
+  color: var(--text-muted);
+}
+.st-font-import:hover { border-color: var(--text-secondary); color: var(--text-secondary); }
 
 .st-recording {
   font-size: 12px;

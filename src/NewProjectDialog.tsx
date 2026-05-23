@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useT } from './i18n';
 import type { ProjectType } from './types';
 
 interface Props {
@@ -7,6 +8,7 @@ interface Props {
 }
 
 export default function NewProjectDialog({ onClose, onCreate }: Props) {
+  const tt = useT();
   const [title, setTitle] = useState('');
   const [type, setType] = useState<ProjectType>('article');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -32,14 +34,14 @@ export default function NewProjectDialog({ onClose, onCreate }: Props) {
   return (
     <div className="vp-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="np-dialog">
-        <div className="np-title">新建作品</div>
+        <div className="np-title">{tt('np.title')}</div>
 
         <input
           ref={inputRef}
           className="np-input"
           type="text"
           value={title}
-          placeholder="作品标题"
+          placeholder={tt('np.placeholder')}
           onChange={(e) => setTitle(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter') handleCreate();
@@ -47,36 +49,36 @@ export default function NewProjectDialog({ onClose, onCreate }: Props) {
           }}
         />
 
-        <div className="np-type-label">类型（创建后不可更改）</div>
+        <div className="np-type-label">{tt('np.type')}</div>
         <div className="np-types">
           <button
             className={`np-type-card${type === 'article' ? ' active' : ''}`}
             onMouseDown={(e) => { e.preventDefault(); setType('article'); }}
           >
             <div className="np-type-icon">doc</div>
-            <div className="np-type-name">单篇文章</div>
-            <div className="np-type-desc">一个独立的文档</div>
+            <div className="np-type-name">{tt('np.article')}</div>
+            <div className="np-type-desc">{tt('np.articleDesc')}</div>
           </button>
           <button
             className={`np-type-card${type === 'book' ? ' active' : ''}`}
             onMouseDown={(e) => { e.preventDefault(); setType('book'); }}
           >
             <div className="np-type-icon">book</div>
-            <div className="np-type-name">多章节书</div>
-            <div className="np-type-desc">包含多个章节</div>
+            <div className="np-type-name">{tt('np.book')}</div>
+            <div className="np-type-desc">{tt('np.bookDesc')}</div>
           </button>
         </div>
 
         <div className="np-actions">
           <button className="vp-cancel" onMouseDown={(e) => { e.preventDefault(); onClose(); }}>
-            取消
+            {tt('np.cancel')}
           </button>
           <button
             className="vp-btn vp-btn-trace"
             onMouseDown={(e) => { e.preventDefault(); handleCreate(); }}
             disabled={!title.trim()}
           >
-            创建
+            {tt('np.create')}
           </button>
         </div>
       </div>

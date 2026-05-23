@@ -5,8 +5,10 @@ import { exportPlainText, exportWordBlob, exportImageBlob } from './export';
 import { loadChapter } from './storage/projects';
 import CopyModal from './CopyModal';
 import SettingsDialog from './SettingsDialog';
+import { useT } from './i18n';
 
 export default function EditorHeader() {
+  const tt = useT();
   const doc = useEditorStore((s) => s.document);
   const activeProject = useProjectStore((s) => s.activeProject);
   const chapters = useProjectStore((s) => s.chapters);
@@ -197,35 +199,35 @@ export default function EditorHeader() {
         </div>
 
         <div className="eh-actions">
-          <button className="gear-btn" onClick={() => setSettingsOpen(true)} title="设置">⚙</button>
+          <button className="gear-btn" onClick={() => setSettingsOpen(true)} title={tt('eh.settings')}>⚙</button>
           <div className="app-dropdown">
             <button className="app-btn" onMouseDown={(e) => { e.preventDefault(); setExportOpen(!exportOpen); }}>
-              导出 ▾
+              {tt('eh.export')} ▾
             </button>
             {exportOpen && (
               <DropdownOverlay onClose={() => setExportOpen(false)}>
                 <div className="dropdown-menu">
                   <button className="dropdown-item" onMouseDown={(e) => { e.preventDefault(); handleCopy(); }}>
-                    复制
+                    {tt('eh.copy')}
                   </button>
                   {!isBook && (
                     <>
                       <div className="dropdown-sep" />
                       <button className="dropdown-item" onMouseDown={(e) => { e.preventDefault(); handleExportTxt(); }}>
-                        纯文本 (.txt)
+                        {tt('eh.txt')}
                       </button>
                       <button className="dropdown-item" onMouseDown={(e) => { e.preventDefault(); handleExportTracebook(); }}>
-                        源文件 (.tracebook)
+                        {tt('eh.tracebook')}
                       </button>
                     </>
                   )}
                   <div className="dropdown-sep" />
                   <button className="dropdown-item" onMouseDown={(e) => { e.preventDefault(); setExportOpen(false); setVersionPick('word'); }}>
-                    Word 文档 (.doc)
+                    {tt('eh.word')}
                   </button>
                   {!isBook && (
                     <button className="dropdown-item" onMouseDown={(e) => { e.preventDefault(); setExportOpen(false); setVersionPick('image'); }}>
-                      图片 (.png)
+                      {tt('eh.image')}
                     </button>
                   )}
                 </div>
@@ -244,17 +246,17 @@ export default function EditorHeader() {
       {versionPick && (
         <div className="vp-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) setVersionPick(null); }}>
           <div className="vp-dialog">
-            <div className="vp-title">选择导出版本</div>
+            <div className="vp-title">{tt('export.version')}</div>
             <div className="vp-buttons">
               <button className="vp-btn vp-btn-trace" onMouseDown={(e) => { e.preventDefault(); handleVersionPick(false); }}>
-                原版
+                {tt('export.trace')}
               </button>
               <button className="vp-btn vp-btn-clean" onMouseDown={(e) => { e.preventDefault(); handleVersionPick(true); }}>
-                纯净版
+                {tt('export.clean')}
               </button>
             </div>
             <button className="vp-cancel" onMouseDown={(e) => { e.preventDefault(); setVersionPick(null); }}>
-              取消
+              {tt('export.cancel')}
             </button>
           </div>
         </div>
