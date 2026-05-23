@@ -149,7 +149,7 @@ body {
 .app-divider {
   height: 1px;
   background: #e8e3da;
-  margin: 8px 0 20px;
+  margin: 8px 0 10px;
 }
 
 /* ---- 编辑器容器 ---- */
@@ -866,7 +866,7 @@ body {
 .hint {
   font-size: 13px;
   color: #b0a89b;
-  margin-top: 6px;
+  margin-top: 0;
   margin-bottom: 16px;
   line-height: 1.6;
   user-select: none;
