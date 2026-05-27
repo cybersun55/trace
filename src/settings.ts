@@ -25,7 +25,7 @@ const STORAGE_KEY = 'trace_settings';
 
 export const DEFAULT_SHORTCUTS: ShortcutDef[] = [
   { id: 'softDelete', label: '删除留痕', keys: 'Backspace', ctrlKey: false, shiftKey: false, key: 'Backspace' },
-  { id: 'hardDelete', label: '真删除', keys: 'Shift+Backspace', ctrlKey: false, shiftKey: true, key: 'Backspace' },
+  { id: 'hardDelete', label: '真删除', keys: 'Cmd+Backspace', ctrlKey: true, shiftKey: false, key: 'Backspace' },
   { id: 'splitParagraph', label: '换段', keys: 'Enter', ctrlKey: false, shiftKey: false, key: 'Enter' },
   { id: 'toggleBold', label: '粗体', keys: 'Ctrl+B', ctrlKey: true, shiftKey: false, key: 'b' },
   { id: 'toggleItalic', label: '斜体', keys: 'Ctrl+I', ctrlKey: true, shiftKey: false, key: 'i' },
