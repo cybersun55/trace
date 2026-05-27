@@ -46,16 +46,32 @@ export function loadSettings(): UserSettings {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return { ...DEFAULTS, shortcuts: [...DEFAULTS.shortcuts] };
     const parsed = JSON.parse(raw);
-    return {
+    let shortcuts: ShortcutDef[] = Array.isArray(parsed.shortcuts) && parsed.shortcuts.length > 0
+      ? parsed.shortcuts
+      : [...DEFAULTS.shortcuts];
+
+    // Migration: update hardDelete from Shift+Backspace to Cmd+Backspace
+    for (const sc of shortcuts) {
+      if (sc.id === 'hardDelete' && sc.shiftKey) {
+        sc.shiftKey = false;
+        sc.ctrlKey = true;
+        sc.keys = 'Cmd+Backspace';
+      }
+    }
+
+    const result: UserSettings = {
       theme: parsed.theme || DEFAULTS.theme,
       lang: parsed.lang || DEFAULTS.lang,
       pageWidth: parsed.pageWidth || DEFAULTS.pageWidth,
       editorFont: parsed.editorFont || DEFAULTS.editorFont,
       hideHints: parsed.hideHints ?? DEFAULTS.hideHints,
-      shortcuts: Array.isArray(parsed.shortcuts) && parsed.shortcuts.length > 0
-        ? parsed.shortcuts
-        : [...DEFAULTS.shortcuts],
+      shortcuts,
     };
+    // Save migrated settings back
+    if (JSON.stringify(shortcuts) !== JSON.stringify(parsed.shortcuts)) {
+      saveSettings(result);
+    }
+    return result;
   } catch {
     return { ...DEFAULTS, shortcuts: [...DEFAULTS.shortcuts] };
   }
