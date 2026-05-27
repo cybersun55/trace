@@ -56,8 +56,12 @@ export default function Editor() {
           case 'toggleHideDeleted': e.preventDefault(); storeToggleHide(); return;
           case 'toggleBold': e.preventDefault(); storeToggleBold(); return;
           case 'toggleItalic': e.preventDefault(); storeToggleItalic(); return;
+          case 'hardDelete':
+            e.preventDefault();
+            useEditorStore.getState().hardDelete();
+            return;
           default:
-            // softDelete, hardDelete, splitParagraph are handled by beforeinput
+            // softDelete, splitParagraph are handled by beforeinput
             break;
         }
       }
