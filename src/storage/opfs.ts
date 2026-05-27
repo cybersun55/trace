@@ -7,13 +7,17 @@ const ROOT_NAME = 'trace_projects';
 let rootHandle: FileSystemDirectoryHandle | null = null;
 let _checked = false;
 let _available = false;
+let _lastError = '';
 
 /** Check if OPFS is available. Safe to call multiple times — only probes once. */
 export async function isOPFSAvailable(): Promise<boolean> {
   if (_checked) return _available;
   _checked = true;
   try {
-    if (!('storage' in navigator)) return false;
+    if (!('storage' in navigator)) {
+      _lastError = 'navigator.storage not available';
+      return false;
+    }
     const root = await navigator.storage.getDirectory();
     // Try a test write to verify full access
     const handle = await root.getFileHandle('_test_', { create: true });
@@ -22,11 +26,26 @@ export async function isOPFSAvailable(): Promise<boolean> {
     await w.close();
     await root.removeEntry('_test_');
     _available = true;
+    _lastError = '';
     return true;
-  } catch {
+  } catch (e: any) {
     _available = false;
+    _lastError = e?.message || String(e);
     return false;
   }
+}
+
+/** Get the last OPFS error message (for UI display). */
+export function getOPFSError(): string {
+  return _lastError;
+}
+
+/** Reset OPFS check so isOPFSAvailable() probes again. */
+export function resetOPFSCheck(): void {
+  _checked = false;
+  _available = false;
+  _lastError = '';
+  rootHandle = null;
 }
 
 export async function getRoot(): Promise<FileSystemDirectoryHandle> {

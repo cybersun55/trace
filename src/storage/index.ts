@@ -1,5 +1,7 @@
 export {
   isOPFSAvailable,
+  getOPFSError,
+  resetOPFSCheck,
   getRoot,
   getProjectsDir,
   getProjectDir,

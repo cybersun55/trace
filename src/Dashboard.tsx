@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useProjectStore } from './store';
-import { importTracebookFull, isOPFSAvailable } from './storage';
+import { importTracebookFull, isOPFSAvailable, getOPFSError, resetOPFSCheck } from './storage';
 import ProjectCard from './ProjectCard';
 import NewProjectDialog from './NewProjectDialog';
 import SettingsDialog from './SettingsDialog';
@@ -15,6 +15,7 @@ export default function Dashboard() {
 
   const tt = useT();
   const [opfsOk, setOpfsOk] = useState(true);
+  const [opfsError, setOpfsError] = useState('');
   const [newDialog, setNewDialog] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
@@ -23,6 +24,7 @@ export default function Dashboard() {
     (async () => {
       const ok = await isOPFSAvailable();
       setOpfsOk(ok);
+      if (!ok) setOpfsError(getOPFSError());
       if (ok) loadProjectList();
     })();
   }, [loadProjectList]);
@@ -76,8 +78,23 @@ export default function Dashboard() {
       {!opfsOk && (
         <div className="db-error">
           <p>此浏览器不支持本地持久存储</p>
-          <p>请使用 Chromium 内核浏览器（Chrome / Edge / Opera），
-            且不要使用隐私/无痕模式。</p>
+          {opfsError && <p style={{ fontSize: '11px', marginTop: '4px', opacity: 0.7 }}>{opfsError}</p>}
+          <p style={{ fontSize: '12px', marginTop: '8px' }}>
+            请使用 Chromium 内核浏览器（Chrome / Edge / Opera），
+            且不要使用隐私/无痕模式。
+          </p>
+          <button className="app-btn" style={{ marginTop: '12px' }} onClick={() => {
+            resetOPFSCheck();
+            setOpfsOk(true);
+            setOpfsError('');
+            isOPFSAvailable().then(ok => {
+              setOpfsOk(ok);
+              if (!ok) setOpfsError(getOPFSError());
+              if (ok) loadProjectList();
+            });
+          }}>
+            重试
+          </button>
         </div>
       )}
 
