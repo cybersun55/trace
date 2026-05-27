@@ -48,11 +48,13 @@ export default function Editor() {
       });
 
       if (match) {
-        e.preventDefault();
         switch (match.id) {
-          case 'toggleHideDeleted': storeToggleHide(); return;
-          case 'toggleBold': storeToggleBold(); return;
-          case 'toggleItalic': storeToggleItalic(); return;
+          case 'toggleHideDeleted': e.preventDefault(); storeToggleHide(); return;
+          case 'toggleBold': e.preventDefault(); storeToggleBold(); return;
+          case 'toggleItalic': e.preventDefault(); storeToggleItalic(); return;
+          default:
+            // softDelete, hardDelete, splitParagraph are handled by beforeinput
+            break;
         }
       }
 

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { Paragraph, Document, AllowedStyles } from '../types';
-import { normalizeParagraph, insertTextAt, formatRange, getFormatAt } from '../engine';
+import { normalizeParagraph, insertTextAt, formatRange, getFormatAt, mergeParagraphs } from '../engine';
 
 
 let _pidCounter = 0;
@@ -439,7 +439,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       } else if (idx > 0) {
         const prev = paras[idx - 1];
         const prevLen = flatLength(prev);
-        const merged = normalizeParagraph({ id: prev.id, children: [...prev.children, ...para.children] });
+        const merged = mergeParagraphs(prev, para);
         const newParas = [...paras];
         newParas.splice(idx - 1, 2, merged);
         set((s) => ({
@@ -457,7 +457,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         }));
       } else if (idx < paras.length - 1) {
         const next = paras[idx + 1];
-        const merged = normalizeParagraph({ id: para.id, children: [...para.children, ...next.children] });
+        const merged = mergeParagraphs(para, next);
         const newParas = [...paras];
         newParas.splice(idx, 2, merged);
         set((s) => ({
