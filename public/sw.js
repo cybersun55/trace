@@ -1,5 +1,5 @@
 // Service Worker for 推敲 Trace
-const CACHE = 'trace-v1';
+const CACHE = 'trace-v2';
 
 self.addEventListener('install', () => {
   self.skipWaiting();
