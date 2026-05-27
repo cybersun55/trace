@@ -25,6 +25,7 @@ export default function Editor() {
   const hideDeleted = useEditorStore((s) => s.hideDeleted);
 
   const shiftRef = useRef(false);
+  const metaRef = useRef(false);
 
   useEffect(() => {
     const el = ref.current;
@@ -34,6 +35,9 @@ export default function Editor() {
       // Safety: reset stuck isComposing if keydown fires without composing
       if (!e.isComposing) storeComposeSet(false);
       shiftRef.current = e.shiftKey;
+      metaRef.current = e.metaKey || e.ctrlKey;
+
+      console.log('[keydown]', e.key, 'shift:', e.shiftKey, 'meta:', metaRef.current, 'composing:', e.isComposing);
 
       const mod = e.metaKey || e.ctrlKey;
       const settings = loadSettings();
@@ -74,13 +78,20 @@ export default function Editor() {
 
     const onKU = (e: KeyboardEvent) => {
       shiftRef.current = e.shiftKey;
+      metaRef.current = e.metaKey || e.ctrlKey;
+    };
+    const onDocKD = (e: KeyboardEvent) => {
+      if (e.key === 'Backspace' || e.key === 'Delete' || e.key === 'Enter')
+        console.log('[doc-keydown]', e.key, 'shift:', e.shiftKey, 'target:', (e.target as HTMLElement)?.tagName);
     };
 
     el.addEventListener('keydown', onKD, true);
     document.addEventListener('keyup', onKU);
+    document.addEventListener('keydown', onDocKD);
     return () => {
       el.removeEventListener('keydown', onKD, true);
       document.removeEventListener('keyup', onKU);
+      document.removeEventListener('keydown', onDocKD);
     };
   }, []);
 
@@ -91,6 +102,9 @@ export default function Editor() {
 
     const onBeforeInput = (e: InputEvent) => {
       const state = useEditorStore.getState();
+
+      console.log('[beforeinput]', e.inputType, 'shiftRef:', shiftRef.current, 'composing:', e.isComposing || state.isComposing);
+
       if (e.isComposing || state.isComposing) return;
 
       e.preventDefault();
@@ -100,11 +114,12 @@ export default function Editor() {
           if (e.data) state.insertText(e.data);
           break;
         case 'deleteContentBackward':
-          if (shiftRef.current) state.hardDelete();
+          if (shiftRef.current || metaRef.current) state.hardDelete();
           else state.softDelete('backward');
           break;
         case 'deleteContentForward':
-          state.softDelete('forward');
+          if (shiftRef.current || metaRef.current) state.hardDelete();
+          else state.softDelete('forward');
           break;
         case 'insertParagraph':
           state.splitParagraph();

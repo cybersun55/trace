@@ -468,9 +468,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     }
   },
 
-  hardDelete: () => {
+  hardDelete: (direction?: 'backward' | 'forward') => {
+    const dir = direction || 'backward';
     const { document, selection, isComposing } = get();
-    if (!selection || isComposing) return;
+    if (!selection || isComposing) { console.log('[hardDelete] BAIL sel:', !!selection, 'comp:', isComposing); return; }
 
     const paras = document.paragraphs;
 
@@ -515,26 +516,48 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
     // Collapsed cursor
     const idx = paras.findIndex((p) => p.id === selection.paragraphId);
-    if (idx === -1) return;
+    if (idx === -1) { console.log('[hardDelete] para not found'); return; }
     const para = paras[idx];
     const pos = selection.anchor;
 
-    if (pos > 0) {
-      const updated = hardDeleteChar(para, pos - 1);
-      set((s) => ({
-        document: { ...s.document, paragraphs: s.document.paragraphs.map((p) => (p.id === para.id ? updated : p)) },
-        selection: { paragraphId: para.id, anchor: pos - 1, focus: pos - 1 },
-      }));
-    } else if (idx > 0) {
-      const prev = paras[idx - 1];
-      const prevLen = flatLength(prev);
-      const merged = normalizeParagraph({ id: prev.id, children: [...prev.children, ...para.children] });
-      const newParas = [...paras];
-      newParas.splice(idx - 1, 2, merged);
-      set((s) => ({
-        document: { ...s.document, paragraphs: newParas },
-        selection: { paragraphId: merged.id, anchor: prevLen, focus: prevLen },
-      }));
+    console.log('[hardDelete] pos:', pos, 'flatLen:', flatLength(para), 'paraIdx:', idx, 'totalParas:', paras.length);
+
+    if (dir === 'forward') {
+      const len = flatLength(para);
+      if (pos < len) {
+        const updated = hardDeleteChar(para, pos);
+        set((s) => ({
+          document: { ...s.document, paragraphs: s.document.paragraphs.map((p) => (p.id === para.id ? updated : p)) },
+          selection: { paragraphId: para.id, anchor: pos, focus: pos },
+        }));
+      } else if (idx < paras.length - 1) {
+        const next = paras[idx + 1];
+        const merged = normalizeParagraph({ id: para.id, children: [...para.children, ...next.children] });
+        const newParas = [...paras];
+        newParas.splice(idx, 2, merged);
+        set((s) => ({
+          document: { ...s.document, paragraphs: newParas },
+          selection: { paragraphId: merged.id, anchor: pos, focus: pos },
+        }));
+      }
+    } else {
+      if (pos > 0) {
+        const updated = hardDeleteChar(para, pos - 1);
+        set((s) => ({
+          document: { ...s.document, paragraphs: s.document.paragraphs.map((p) => (p.id === para.id ? updated : p)) },
+          selection: { paragraphId: para.id, anchor: pos - 1, focus: pos - 1 },
+        }));
+      } else if (idx > 0) {
+        const prev = paras[idx - 1];
+        const prevLen = flatLength(prev);
+        const merged = normalizeParagraph({ id: prev.id, children: [...prev.children, ...para.children] });
+        const newParas = [...paras];
+        newParas.splice(idx - 1, 2, merged);
+        set((s) => ({
+          document: { ...s.document, paragraphs: newParas },
+          selection: { paragraphId: merged.id, anchor: prevLen, focus: prevLen },
+        }));
+      }
     }
   },
 
