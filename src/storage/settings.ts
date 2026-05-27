@@ -1,6 +1,6 @@
 import type { AppSettings, RecentProjectEntry } from '../types';
 
-const SETTINGS_KEY = 'trace_settings';
+const SETTINGS_KEY = 'trace_app';
 
 const DEFAULT: AppSettings = {
   lastOpenProjectId: null,
