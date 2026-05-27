@@ -118,11 +118,11 @@ export default function Editor() {
           if (e.data) state.insertText(e.data);
           break;
         case 'deleteContentBackward':
-          if (shiftRef.current || metaRef.current) state.hardDelete();
+          if (metaRef.current) state.hardDelete();
           else state.softDelete('backward');
           break;
         case 'deleteContentForward':
-          if (shiftRef.current || metaRef.current) state.hardDelete();
+          if (metaRef.current) state.hardDelete();
           else state.softDelete('forward');
           break;
         case 'insertParagraph':
