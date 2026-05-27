@@ -86,15 +86,22 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
       set({ activeProject: meta, chapters, activeChapterId, view: 'editor', isLoading: false });
     } catch (e) {
-      set({ error: '无法打开项目', isLoading: false });
+      const msg = e instanceof Error ? e.message : String(e);
+      set({ error: '无法打开项目: ' + msg, isLoading: false });
     }
   },
 
   createProject: async (title, type) => {
-    const meta = await projects.createProject(title, type);
-    const list = await projects.listProjects();
-    set({ projects: list });
-    return meta.id;
+    try {
+      const meta = await projects.createProject(title, type);
+      const list = await projects.listProjects();
+      set({ projects: list });
+      return meta.id;
+    } catch (e: any) {
+      const msg = e?.message || String(e);
+      set({ error: '无法创建项目: ' + msg });
+      return '';
+    }
   },
 
   deleteProject: async (id) => {
