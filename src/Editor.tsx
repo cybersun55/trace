@@ -72,8 +72,16 @@ export default function Editor() {
       }
     };
 
+    const onKU = (e: KeyboardEvent) => {
+      shiftRef.current = e.shiftKey;
+    };
+
     el.addEventListener('keydown', onKD, true);
-    return () => el.removeEventListener('keydown', onKD, true);
+    document.addEventListener('keyup', onKU);
+    return () => {
+      el.removeEventListener('keydown', onKD, true);
+      document.removeEventListener('keyup', onKU);
+    };
   }, []);
 
   // Intercept beforeinput to prevent browser from modifying DOM
