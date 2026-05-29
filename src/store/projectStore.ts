@@ -151,6 +151,10 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
     const doc = useEditorStore.getState().getDocument();
     await projects.saveChapter(st.activeProject.id, st.activeChapterId, doc);
+
+    // Refresh meta to sync updated wordCount (total for books)
+    const meta = await projects.loadProjectMeta(st.activeProject.id);
+    if (meta) set({ activeProject: meta });
   },
 
   closeProject: async () => {

@@ -264,6 +264,7 @@ body {
   min-height: 1.8em;
   font-size: 17px;
   letter-spacing: 0.02em;
+  text-align: justify;
 }
 
 /* ---- 行内文本 ---- */

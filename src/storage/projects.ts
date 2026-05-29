@@ -92,7 +92,25 @@ export async function saveChapter(
   }
 
   meta.updatedAt = new Date().toISOString();
-  meta.wordCount = countWords(doc);
+
+  if (meta.type === 'book') {
+    // Sum word count across ALL chapters for total
+    let total = 0;
+    const toc = await loadTOC(projectId);
+    if (toc) {
+      const chaptersDir = await getChaptersDir(projectId);
+      for (const ch of toc.chapters) {
+        const chDoc = ch.id === chapterId
+          ? doc
+          : await readJSON<Document>(chaptersDir, `${ch.id}.json`);
+        if (chDoc) total += countWords(chDoc);
+      }
+    }
+    meta.wordCount = total;
+  } else {
+    meta.wordCount = countWords(doc);
+  }
+
   await saveProjectMeta(projectId, meta);
 }
 
