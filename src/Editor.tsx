@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback } from 'react';
+import { memo, useRef, useEffect, useCallback } from 'react';
 import { useEditorStore } from './store';
 import { loadSettings } from './settings';
 import ParagraphBlock from './ParagraphBlock';
@@ -6,7 +6,7 @@ import Toolbar from './Toolbar';
 import { exportTracebook, exportTextFile } from './storage';
 import { exportPlainText } from './export';
 
-export default function Editor() {
+export default memo(function Editor() {
   const ref = useRef<HTMLDivElement>(null);
   const doc = useEditorStore((s) => s.document);
   // Selection is NOT subscribed here — reading it would trigger re-renders
@@ -266,7 +266,7 @@ export default function Editor() {
       <Toolbar />
     </div>
   );
-}
+});
 
 // ==== helpers ====
 
