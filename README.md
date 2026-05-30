@@ -14,27 +14,43 @@
 
 ## 快速开始
 
-### 使用
+### 环境要求
 
-1. 浏览器打开 **https://cybersun55.github.io/trace/**
-2. 点击「新建项目」，选择"单篇文章"或"多章节书"
-3. 开始写作
+- Node.js 18+
+- npm 9+
 
-### 安装到桌面（推荐）
+### 本地运行
 
-在浏览器地址栏右侧找到安装图标（⊕），点击即可安装为独立应用。之后可以像普通 App 一样从桌面打开，支持离线使用。
+```bash
+# 克隆仓库
+git clone https://github.com/cybersun55/trace.git
+cd trace
 
-> 仅 Chrome / Edge 浏览器支持。Safari 和 Firefox 目前不支持。
+# 安装依赖
+npm install
 
-### 备份与恢复
+# 启动开发服务器
+npm run dev
+```
 
-数据存储在浏览器内部，清理浏览器缓存会导致数据丢失。建议定期导出备份：
+浏览器打开 **http://localhost:5173** 即可使用。
 
-- 点击右上角菜单 → 导出 → 选择 `.tracebook` 格式
-- `.tracebook` 文件包含完整的文章内容和修改历史
-- 新设备上通过「导入项目」恢复
+### 生产构建
 
-> 注意：换浏览器、换设备、使用隐私/无痕模式，数据无法同步。务必定期导出备份。
+```bash
+npm run build
+```
+
+构建产物在 `dist/` 目录，将整个目录部署到任意静态服务器即可。例如本地快速预览：
+
+```bash
+npx serve dist
+```
+
+### 运行测试
+
+```bash
+npm run test
 
 ## ✨ 特性
 
@@ -112,22 +128,6 @@
 - 无任何后端服务、无遥测、无数据收集
 - 支持 .tracebook 格式导入导出，方便备份迁移
 - 编辑时自动保存到 localStorage 作为崩溃恢复安全网
-
-## 🛠 本地开发
-
-### 环境要求
-
-- Node.js 18+
-- npm 9+
-
-```bash
-git clone https://github.com/cybersun55/trace.git
-cd trace
-npm install
-npm run dev        # 启动开发服务器 → http://localhost:5173
-npm run test       # 运行测试
-npm run build      # 生产构建 → dist/
-```
 
 `dist/` 目录为完整静态站点，可部署到任意静态托管服务（GitHub Pages、Vercel、Netlify、Nginx 等）。
 
