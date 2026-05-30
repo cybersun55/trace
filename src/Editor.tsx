@@ -58,10 +58,24 @@ export default memo(function Editor() {
       if (match) {
         switch (match.id) {
           case 'toggleHideDeleted': e.preventDefault(); storeToggleHide(); return;
-          case 'toggleBold': e.preventDefault(); storeToggleBold(); return;
-          case 'toggleItalic': e.preventDefault(); storeToggleItalic(); return;
+          case 'toggleBold': {
+            e.preventDefault();
+            const sel = useEditorStore.getState().selection;
+            // Only guard when selection is non-collapsed (doc will change via applyFormatToSelection)
+            pendingCursorRestore = sel ? (sel.anchor !== sel.focus || (!!sel.focusParagraphId && sel.focusParagraphId !== sel.paragraphId)) : false;
+            storeToggleBold();
+            return;
+          }
+          case 'toggleItalic': {
+            e.preventDefault();
+            const sel = useEditorStore.getState().selection;
+            pendingCursorRestore = sel ? (sel.anchor !== sel.focus || (!!sel.focusParagraphId && sel.focusParagraphId !== sel.paragraphId)) : false;
+            storeToggleItalic();
+            return;
+          }
           case 'hardDelete':
             e.preventDefault();
+            pendingCursorRestore = true;
             useEditorStore.getState().hardDelete();
             return;
           default:
@@ -253,7 +267,10 @@ export default memo(function Editor() {
   const onCompositionStart = useCallback(() => storeComposeSet(true), [storeComposeSet]);
   const onCompositionEnd = useCallback((e: React.CompositionEvent) => {
     storeComposeSet(false);
-    if (e.data) storeInsert(e.data);
+    if (e.data) {
+      pendingCursorRestore = true;
+      storeInsert(e.data);
+    }
   }, [storeComposeSet, storeInsert]);
 
   return (
