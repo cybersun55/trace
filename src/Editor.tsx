@@ -226,6 +226,10 @@ export default function Editor() {
   useEffect(() => {
     const onSelChange = () => {
       if (useEditorStore.getState().isComposing) return;
+      // Ignore selection changes when editor doesn't have focus —
+      // the browser (especially on Windows IME) may reset selection
+      // to the beginning of contentEditable while idle.
+      if (!ref.current?.contains(document.activeElement)) return;
       syncSelection();
     };
     document.addEventListener('selectionchange', onSelChange);
