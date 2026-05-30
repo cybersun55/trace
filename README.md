@@ -51,6 +51,7 @@ npx serve dist
 
 ```bash
 npm run test
+```
 
 ## ✨ 特性
 
@@ -128,8 +129,6 @@ npm run test
 - 无任何后端服务、无遥测、无数据收集
 - 支持 .tracebook 格式导入导出，方便备份迁移
 - 编辑时自动保存到 localStorage 作为崩溃恢复安全网
-
-`dist/` 目录为完整静态站点，可部署到任意静态托管服务（GitHub Pages、Vercel、Netlify、Nginx 等）。
 
 ## 🛠 技术架构
 
