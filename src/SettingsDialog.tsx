@@ -11,6 +11,9 @@ interface Props { onClose: () => void; }
 
 type Tab = 'general' | 'editor' | 'shortcuts' | 'data' | 'about';
 
+const isMac = /Mac/i.test(navigator.platform);
+const modKey = (keys: string) => isMac ? keys : keys.replace(/Cmd/gi, 'Ctrl');
+
 function getTabs(lang: Lang): { id: Tab; label: string }[] {
   return [
     { id: 'general', label: translate('settings.general', lang) },
@@ -308,7 +311,7 @@ export default function SettingsDialog({ onClose }: Props) {
                         {recording === sc.id ? (
                           <span className="st-recording">{tt('settings.recording')}</span>
                         ) : (
-                          <kbd>{sc.keys}</kbd>
+                          <kbd>{modKey(sc.keys)}</kbd>
                         )}
                       </td>
                       <td style={{ textAlign: 'right' }}>

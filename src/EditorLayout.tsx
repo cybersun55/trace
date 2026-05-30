@@ -35,14 +35,17 @@ export default function EditorLayout() {
 
   // Build hint from shortcut settings
   useEffect(() => {
+    const isMac = /Mac/i.test(navigator.platform);
+    const modKey = (keys: string) => isMac ? keys : keys.replace(/Cmd/gi, 'Ctrl');
+
     const s = loadSettings();
     setHideHints(s.hideHints);
     const parts = s.shortcuts
       .filter((sc) => ['softDelete', 'hardDelete', 'splitParagraph', 'toggleBold', 'toggleItalic', 'toggleHideDeleted'].includes(sc.id))
       .map((sc) => {
-        if (sc.id === 'toggleBold') return `<span>${sc.keys}</span> / <span>${s.shortcuts.find(x => x.id === 'toggleItalic')?.keys || 'Ctrl+I'}</span> <b>格式</b>`;
+        if (sc.id === 'toggleBold') return `<span>${modKey(sc.keys)}</span> / <span>${modKey(s.shortcuts.find(x => x.id === 'toggleItalic')?.keys || 'Ctrl+I')}</span> <b>格式</b>`;
         if (sc.id === 'toggleItalic') return null; // combined with toggleBold
-        return `<span>${sc.keys}</span> <b>${sc.label}</b>`;
+        return `<span>${modKey(sc.keys)}</span> <b>${sc.label}</b>`;
       })
       .filter(Boolean)
       .join(' | ');
