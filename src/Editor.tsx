@@ -6,6 +6,10 @@ import Toolbar from './Toolbar';
 import { exportTracebook, exportTextFile } from './storage';
 import { exportPlainText } from './export';
 
+// Flag to block selection sync while innerHTML is being reset and cursor not yet restored.
+// Set synchronously when document mutates, cleared after cursor restoration effect runs.
+let pendingCursorRestore = false;
+
 export default memo(function Editor() {
   const ref = useRef<HTMLDivElement>(null);
   const doc = useEditorStore((s) => s.document);
@@ -112,6 +116,7 @@ export default memo(function Editor() {
       if (e.isComposing || state.isComposing) return;
 
       e.preventDefault();
+      pendingCursorRestore = true;
 
       switch (e.inputType) {
         case 'insertText':
@@ -151,36 +156,38 @@ export default memo(function Editor() {
   // Cursor / selection restoration (only on document change, not on selection change)
   useEffect(() => {
     const sel = useEditorStore.getState().selection;
-    if (!sel) return;
+    if (!sel) { pendingCursorRestore = false; return; }
     const el = ref.current;
-    if (!el) return;
+    if (!el) { pendingCursorRestore = false; return; }
 
     // Cross-paragraph: leave the browser's native selection alone
     const isMulti = sel.focusParagraphId && sel.focusParagraphId !== sel.paragraphId;
-    if (isMulti) return;
+    if (isMulti) { pendingCursorRestore = false; return; }
 
     const block = el.querySelector(`[data-pid="${sel.paragraphId}"]`) as HTMLElement | null;
-    if (!block) return;
+    if (!block) { pendingCursorRestore = false; return; }
 
     if (sel.anchor === sel.focus) {
       const pos = findDOMPosition(block, sel.focus);
-      if (!pos) return;
+      if (!pos) { pendingCursorRestore = false; return; }
       const r = document.createRange();
       r.setStart(pos.node, pos.offset);
       r.collapse(true);
       applyRange(r);
+      pendingCursorRestore = false;
       return;
     }
 
     // Non-collapsed within same paragraph: restore with correct direction
     const anchorPos = findDOMPosition(block, sel.anchor);
     const focusPos = findDOMPosition(block, sel.focus);
-    if (!anchorPos || !focusPos) return;
+    if (!anchorPos || !focusPos) { pendingCursorRestore = false; return; }
 
     window.getSelection()?.setBaseAndExtent(
       anchorPos.node, anchorPos.offset,
       focusPos.node, focusPos.offset,
     );
+    pendingCursorRestore = false;
   }, [doc]);
 
   function findParagraphBlock(node: Node): HTMLElement | null {
@@ -195,6 +202,7 @@ export default memo(function Editor() {
   }
 
   function syncSelection() {
+    if (pendingCursorRestore) return;
     const domSel = window.getSelection();
     if (!domSel || domSel.rangeCount === 0) return;
     const el = ref.current;
