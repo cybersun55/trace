@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#4a4238" />
+    <meta name="description" content="写作如推敲 — 删减可见，改动留痕" />
+    <link rel="icon" href="/trace/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/trace/icon.svg" />
+    <link rel="manifest" href="/trace/manifest.json" />
+    <title>推敲 Trace</title>
+    <script type="module" crossorigin src="/trace/assets/index-SC7FNbuL.js"></script>
+    <link rel="stylesheet" crossorigin href="/trace/assets/index-BkvAuk_d.css">
+  </head>
+  <body>
+    <div id="root"></div>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('/sw.js');
+        });
+      }
+    </script>
+  </body>
+</html>
