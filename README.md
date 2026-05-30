@@ -12,6 +12,12 @@
 
 最后，此项目是vibe-coding的作品，注定有许多不足与漏洞，欢迎各位大佬批评指正，我们是真诚的。
 
+## 快速开始
+
+直接打开 **https://cybersun55.github.io/trace/** 就能用，无需注册、无需安装。
+
+所有数据存储在浏览器本地，换了浏览器或设备数据不会同步。导出项目可以用 `.tracebook` 格式备份。
+
 ## ✨ 特性
 
 ### 核心理念：改动留痕
@@ -88,6 +94,24 @@
 - 无任何后端服务、无遥测、无数据收集
 - 支持 .tracebook 格式导入导出，方便备份迁移
 - 编辑时自动保存到 localStorage 作为崩溃恢复安全网
+
+## 🛠 本地开发
+
+### 环境要求
+
+- Node.js 18+
+- npm 9+
+
+```bash
+git clone https://github.com/cybersun55/trace.git
+cd trace
+npm install
+npm run dev        # 启动开发服务器 → http://localhost:5173
+npm run test       # 运行测试
+npm run build      # 生产构建 → dist/
+```
+
+`dist/` 目录为完整静态站点，可部署到任意静态托管服务（GitHub Pages、Vercel、Netlify、Nginx 等）。
 
 ## 🛠 技术架构
 
@@ -168,52 +192,6 @@ trace_projects/               ← navigator.storage.getDirectory()
   fonts/                      ← 用户导入的字体文件
     {font-name}.ttf
 ```
-
-## 🚀 快速开始
-
-### 环境要求
-
-- Node.js 18+
-- npm 9+
-
-### 本地开发
-
-```bash
-# 克隆仓库
-git clone https://github.com/{your-username}/trace.git
-cd trace
-
-# 安装依赖
-npm install
-
-# 启动开发服务器（默认 http://localhost:5173）
-npm run dev
-
-# 运行全部测试
-npm run test
-
-# TypeScript 类型检查
-npx tsc --noEmit
-
-# 生产构建
-npm run build
-# 产出在 dist/ 目录
-```
-
-### 部署到 GitHub Pages
-
-1. 将代码推送到 GitHub 仓库
-2. 进入仓库 **Settings → Pages**
-3. Source 选择 **GitHub Actions**，选择 Vite 部署模板
-4. 每次 `git push` 自动部署
-
-### 其他托管平台
-
-`dist/` 目录为完整静态站点，可一键部署到：
-
-- **Vercel** — `vercel --prod`
-- **Netlify** — 拖拽 `dist/` 到 Netlify 面板
-- **Nginx** — 将 `dist/` 设为 `root`
 
 ## 🌐 浏览器兼容性
 
