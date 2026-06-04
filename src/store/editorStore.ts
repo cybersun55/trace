@@ -403,7 +403,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         newParas[sIdx] = updated;
         set((s) => ({
           document: { ...s.document, paragraphs: newParas },
-          selection: { paragraphId: updated.id, anchor: from, focus: from },
+          selection: { paragraphId: updated.id, anchor: to, focus: to },
         }));
         return;
       }
@@ -418,7 +418,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
       set((s) => ({
         document: { ...s.document, paragraphs: newParas },
-        selection: { paragraphId: range.startPid, anchor: range.startOffset, focus: range.startOffset },
+        selection: { paragraphId: range.endPid, anchor: range.endOffset, focus: range.endOffset },
       }));
       return;
     }
