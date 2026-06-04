@@ -18,6 +18,20 @@ function flatLength(p: Paragraph): number {
   return len;
 }
 
+/** Check whether the character at `offset` inside `para` is soft-deleted */
+function isCharDeleted(para: Paragraph, offset: number): boolean {
+  let pos = 0;
+  for (const c of para.children) {
+    if (c.type === 'soft-break') continue;
+    const len = c.insert.length;
+    if (offset >= pos && offset < pos + len) {
+      return c.status === 'deleted';
+    }
+    pos += len;
+  }
+  return false;
+}
+
 function softDeleteRange(para: Paragraph, from: number, to: number): Paragraph {
   if (from >= to) return para;
 
@@ -430,8 +444,13 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const pos = selection.anchor;
 
     if (direction === 'backward') {
-      if (pos > 0) {
-        const updated = softDeleteRange(para, pos - 1, pos);
+      // Walk backward past already-deleted chars to find the next normal char
+      let delPos = pos;
+      while (delPos > 0 && isCharDeleted(para, delPos - 1)) {
+        delPos--;
+      }
+      if (delPos > 0) {
+        const updated = softDeleteRange(para, delPos - 1, delPos);
         set((s) => ({
           document: { ...s.document, paragraphs: s.document.paragraphs.map((p) => (p.id === para.id ? updated : p)) },
           selection: { paragraphId: para.id, anchor: pos, focus: pos },
@@ -449,8 +468,13 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       }
     } else {
       const len = flatLength(para);
-      if (pos < len) {
-        const updated = softDeleteRange(para, pos, pos + 1);
+      // Walk forward past already-deleted chars to find the next normal char
+      let delPos = pos;
+      while (delPos < len && isCharDeleted(para, delPos)) {
+        delPos++;
+      }
+      if (delPos < len) {
+        const updated = softDeleteRange(para, delPos, delPos + 1);
         set((s) => ({
           document: { ...s.document, paragraphs: s.document.paragraphs.map((p) => (p.id === para.id ? updated : p)) },
           selection: { paragraphId: para.id, anchor: pos + 1, focus: pos + 1 },
