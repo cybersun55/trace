@@ -1,6 +1,5 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useEditorStore } from './store';
-import { useProjectStore } from './store/projectStore';
 import { loadSettings } from './settings';
 import Editor from './Editor';
 import EditorHeader from './EditorHeader';
@@ -25,13 +24,11 @@ function computeStats(doc: import('./types').Document) {
 export default function EditorLayout() {
   const doc = useEditorStore((s) => s.document);
   const stats = useMemo(() => computeStats(doc), [doc]);
-  const activeProject = useProjectStore((s) => s.activeProject);
   const [hideHints, setHideHints] = useState(false);
   const [hintHtml, setHintHtml] = useState('');
 
-  // Total word count: for books use the store's total (updated on save),
-  // for articles use the live count from current doc
-  const totalWords = activeProject?.type === 'book' ? activeProject.wordCount : stats.normalChars;
+  // Show live character count of the current chapter/section
+  const totalWords = stats.normalChars;
 
   // Build hint from shortcut settings
   useEffect(() => {
