@@ -434,7 +434,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         const updated = softDeleteRange(para, pos - 1, pos);
         set((s) => ({
           document: { ...s.document, paragraphs: s.document.paragraphs.map((p) => (p.id === para.id ? updated : p)) },
-          selection: { paragraphId: para.id, anchor: pos - 1, focus: pos - 1 },
+          selection: { paragraphId: para.id, anchor: pos, focus: pos },
         }));
       } else if (idx > 0) {
         const prev = paras[idx - 1];
@@ -453,7 +453,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         const updated = softDeleteRange(para, pos, pos + 1);
         set((s) => ({
           document: { ...s.document, paragraphs: s.document.paragraphs.map((p) => (p.id === para.id ? updated : p)) },
-          selection: { paragraphId: para.id, anchor: pos, focus: pos },
+          selection: { paragraphId: para.id, anchor: pos + 1, focus: pos + 1 },
         }));
       } else if (idx < paras.length - 1) {
         const next = paras[idx + 1];
