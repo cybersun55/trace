@@ -26,6 +26,8 @@
     "vitest": "^4.1.5"
   },
   "dependencies": {
+    "@tauri-apps/api": "^2.11.0",
+    "@tauri-apps/plugin-fs": "^2.5.1",
     "html-to-image": "^1.11.13",
     "jszip": "^3.10.1",
     "react": "^19.2.6",
