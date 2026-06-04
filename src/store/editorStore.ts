@@ -253,11 +253,9 @@ function rangeHasFormat(para: Paragraph, from: number, to: number, key: 'bold' |
   return true;
 }
 
-/** Return a sensible cursor position for a document (start of first paragraph, or null) */
-function defaultSelection(doc: Document): EditorSelection | null {
-  const first = doc.paragraphs[0];
-  if (!first) return null;
-  return { paragraphId: first.id, anchor: 0, focus: 0 };
+interface HistoryEntry {
+  document: Document;
+  selection: EditorSelection | null;
 }
 
 // ---- store ----
@@ -270,7 +268,7 @@ interface EditorState {
   activeFormats: AllowedStyles;
 
   // Undo/redo
-  history: Document[];
+  history: HistoryEntry[];
   historyIndex: number;
   _lastOp: string;
   _lastOpTime: number;
@@ -306,7 +304,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   hideDeleted: false,
   activeFormats: {},
 
-  history: [structuredClone(EMPTY_DOC)],
+  history: [{ document: structuredClone(EMPTY_DOC), selection: null }],
   historyIndex: 0,
   _lastOp: '',
   _lastOpTime: 0,
@@ -685,7 +683,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   loadDocument: (doc) => {
     set({
       document: doc,
-      history: [structuredClone(doc)],
+      history: [{ document: structuredClone(doc), selection: null }],
       historyIndex: 0,
       _lastOp: '',
       _lastOpTime: 0,
@@ -697,7 +695,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     selection: null,
     activeFormats: {},
     hideDeleted: false,
-    history: [structuredClone(doc)],
+    history: [{ document: structuredClone(doc), selection: null }],
     historyIndex: 0,
     _lastOp: '',
     _lastOpTime: 0,
@@ -707,7 +705,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   pushHistory: (op: string) => {
     const now = Date.now();
-    const { history, historyIndex, document, _lastOp, _lastOpTime } = get();
+    const { history, historyIndex, document, selection, _lastOp, _lastOpTime } = get();
 
     // Merge continuous same-type operations within MERGE_MS
     if (op === _lastOp && now - _lastOpTime < MERGE_MS && historyIndex === history.length - 1) {
@@ -717,7 +715,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
     // Truncate any "future" states (user undid, then did something new)
     const newHistory = history.slice(0, historyIndex + 1);
-    newHistory.push(structuredClone(document));
+    newHistory.push({ document: structuredClone(document), selection: selection ? { ...selection } : null });
 
     // Cap history size
     if (newHistory.length > MAX_HISTORY) newHistory.shift();
@@ -734,11 +732,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const { historyIndex, history } = get();
     if (historyIndex <= 0) return;
     const newIndex = historyIndex - 1;
-    const restored = structuredClone(history[newIndex]);
+    const entry = history[newIndex];
     set({
-      document: restored,
+      document: structuredClone(entry.document),
       historyIndex: newIndex,
-      selection: defaultSelection(restored),
+      selection: entry.selection ? { ...entry.selection } : null,
     });
   },
 
@@ -746,18 +744,18 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const { historyIndex, history } = get();
     if (historyIndex >= history.length - 1) return;
     const newIndex = historyIndex + 1;
-    const restored = structuredClone(history[newIndex]);
+    const entry = history[newIndex];
     set({
-      document: restored,
+      document: structuredClone(entry.document),
       historyIndex: newIndex,
-      selection: defaultSelection(restored),
+      selection: entry.selection ? { ...entry.selection } : null,
     });
   },
 
   clearHistory: (doc?: Document) => {
     const d = doc || get().document;
     set({
-      history: [structuredClone(d)],
+      history: [{ document: structuredClone(d), selection: null }],
       historyIndex: 0,
       _lastOp: '',
       _lastOpTime: 0,
