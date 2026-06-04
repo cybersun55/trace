@@ -26,6 +26,8 @@ export default memo(function Editor() {
   const storeToggleHide = useEditorStore((s) => s.toggleHideDeleted);
   const storeToggleBold = useEditorStore((s) => s.toggleBold);
   const storeToggleItalic = useEditorStore((s) => s.toggleItalic);
+  const storeUndo = useEditorStore((s) => s.undo);
+  const storeRedo = useEditorStore((s) => s.redo);
   const hideDeleted = useEditorStore((s) => s.hideDeleted);
 
   const shiftRef = useRef(false);
@@ -44,6 +46,19 @@ export default memo(function Editor() {
       console.log('[keydown]', e.key, 'shift:', e.shiftKey, 'meta:', metaRef.current, 'composing:', e.isComposing);
 
       const mod = e.metaKey || e.ctrlKey;
+
+      // Undo / Redo (always available, not configurable)
+      if (mod && !e.shiftKey && (e.key === 'z' || e.key === 'Z')) {
+        e.preventDefault();
+        storeUndo();
+        return;
+      }
+      if (mod && e.shiftKey && (e.key === 'z' || e.key === 'Z')) {
+        e.preventDefault();
+        storeRedo();
+        return;
+      }
+
       const settings = loadSettings();
       const scuts = settings.shortcuts;
 

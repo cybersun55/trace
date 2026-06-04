@@ -8,6 +8,10 @@ function nextPid(): string {
   return 'p' + Date.now() + '_' + (_pidCounter++);
 }
 
+const EMPTY_DOC: Document = { chapterId: 'ch1', paragraphs: [{ id: 'p1', children: [] }] };
+const MAX_HISTORY = 100;
+const MERGE_MS = 1000;
+
 // ---- helpers ----
 
 function flatLength(p: Paragraph): number {
@@ -190,6 +194,8 @@ function applyFormatToSelection(doc: Document, sel: EditorSelection, attrs: Part
   const range = getMultiRange(doc, sel);
   if (!range) return;
 
+  useEditorStore.getState().pushHistory('format');
+
   const paras = doc.paragraphs;
   const sIdx = paras.findIndex((p) => p.id === range.startPid);
   const eIdx = paras.findIndex((p) => p.id === range.endPid);
@@ -247,6 +253,13 @@ function rangeHasFormat(para: Paragraph, from: number, to: number, key: 'bold' |
   return true;
 }
 
+/** Return a sensible cursor position for a document (start of first paragraph, or null) */
+function defaultSelection(doc: Document): EditorSelection | null {
+  const first = doc.paragraphs[0];
+  if (!first) return null;
+  return { paragraphId: first.id, anchor: 0, focus: 0 };
+}
+
 // ---- store ----
 
 interface EditorState {
@@ -255,6 +268,12 @@ interface EditorState {
   isComposing: boolean;
   hideDeleted: boolean;
   activeFormats: AllowedStyles;
+
+  // Undo/redo
+  history: Document[];
+  historyIndex: number;
+  _lastOp: string;
+  _lastOpTime: number;
 
   setSelection: (sel: EditorSelection | null) => void;
   setIsComposing: (v: boolean) => void;
@@ -272,14 +291,25 @@ interface EditorState {
   loadDocument: (doc: Document) => void;
   getDocument: () => Document;
   initDocument: (doc: Document) => void;
+
+  // History actions
+  pushHistory: (op: string) => void;
+  undo: () => void;
+  redo: () => void;
+  clearHistory: (doc?: Document) => void;
 }
 
 export const useEditorStore = create<EditorState>((set, get) => ({
-  document: { chapterId: 'ch1', paragraphs: [{ id: 'p1', children: [] }] },
+  document: structuredClone(EMPTY_DOC),
   selection: null,
   isComposing: false,
   hideDeleted: false,
   activeFormats: {},
+
+  history: [structuredClone(EMPTY_DOC)],
+  historyIndex: 0,
+  _lastOp: '',
+  _lastOpTime: 0,
 
   setSelection: (sel) => {
     // Update activeFormats based on cursor position
@@ -343,6 +373,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   setLineHeight: (lh) => {
     const { document, selection } = get();
     if (!selection) return;
+    get().pushHistory('format');
     const paraId = selection.paragraphId;
     set((s) => ({
       document: {
@@ -357,6 +388,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   insertText: (text) => {
     const { document, selection } = get();
     if (!selection) return;
+
+    get().pushHistory('insertText');
 
     const paraId = selection.paragraphId;
     const anchor = selection.anchor;
@@ -394,6 +427,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   softDelete: (direction) => {
     const { document, selection, isComposing } = get();
     if (!selection || isComposing) return;
+
+    get().pushHistory('softDelete');
 
     const paras = document.paragraphs;
 
@@ -497,6 +532,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const { document, selection, isComposing } = get();
     if (!selection || isComposing) { console.log('[hardDelete] BAIL sel:', !!selection, 'comp:', isComposing); return; }
 
+    get().pushHistory('hardDelete');
+
     const paras = document.paragraphs;
 
     // Handle non-collapsed (range) selection
@@ -589,6 +626,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const { document, selection } = get();
     if (!selection || !isCollapsed(selection)) return;
 
+    get().pushHistory('splitParagraph');
+
     const paras = document.paragraphs;
     const idx = paras.findIndex((p) => p.id === selection.paragraphId);
     if (idx === -1) return;
@@ -643,9 +682,85 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     }));
   },
 
-  loadDocument: (doc) => set({ document: doc }),
+  loadDocument: (doc) => {
+    set({
+      document: doc,
+      history: [structuredClone(doc)],
+      historyIndex: 0,
+      _lastOp: '',
+      _lastOpTime: 0,
+    });
+  },
   getDocument: () => get().document,
-  initDocument: (doc) => set({ document: doc, selection: null, activeFormats: {}, hideDeleted: false }),
+  initDocument: (doc) => set({
+    document: doc,
+    selection: null,
+    activeFormats: {},
+    hideDeleted: false,
+    history: [structuredClone(doc)],
+    historyIndex: 0,
+    _lastOp: '',
+    _lastOpTime: 0,
+  }),
+
+  // ---- history ----
+
+  pushHistory: (op: string) => {
+    const now = Date.now();
+    const { history, historyIndex, document, _lastOp, _lastOpTime } = get();
+
+    // Merge continuous same-type operations within MERGE_MS
+    if (op === _lastOp && now - _lastOpTime < MERGE_MS && historyIndex === history.length - 1) {
+      set({ _lastOpTime: now });
+      return;
+    }
+
+    // Truncate any "future" states (user undid, then did something new)
+    const newHistory = history.slice(0, historyIndex + 1);
+    newHistory.push(structuredClone(document));
+
+    // Cap history size
+    if (newHistory.length > MAX_HISTORY) newHistory.shift();
+
+    set({
+      history: newHistory,
+      historyIndex: newHistory.length - 1,
+      _lastOp: op,
+      _lastOpTime: now,
+    });
+  },
+
+  undo: () => {
+    const { historyIndex, history } = get();
+    if (historyIndex <= 0) return;
+    const newIndex = historyIndex - 1;
+    const restored = structuredClone(history[newIndex]);
+    set({
+      document: restored,
+      historyIndex: newIndex,
+      selection: defaultSelection(restored),
+    });
+  },
+
+  redo: () => {
+    const { historyIndex, history } = get();
+    if (historyIndex >= history.length - 1) return;
+    const newIndex = historyIndex + 1;
+    const restored = structuredClone(history[newIndex]);
+    set({
+      document: restored,
+      historyIndex: newIndex,
+      selection: defaultSelection(restored),
+    });
+  },
+
+  clearHistory: (doc?: Document) => {
+    const d = doc || get().document;
+    set({
+      history: [structuredClone(d)],
+      historyIndex: 0,
+      _lastOp: '',
+      _lastOpTime: 0,
+    });
+  },
 }));
-
-
