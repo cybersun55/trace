@@ -1520,3 +1520,38 @@ body {
   height: 15px;
   accent-color: var(--text-secondary);
 }
+
+/* ---- Windows 平台适配 ---- */
+/* Windows 的字体渲染（ClearType）比 macOS 更细更淡，需要提高对比度和字重 */
+
+[data-platform="win"] body {
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+[data-platform="win"] {
+  --text: #1a1a1a;
+  --text-secondary: #3a3228;
+  --text-muted: #6c6256;
+  --text-faint: #90887b;
+  --text-faint-2: #a0988b;
+}
+
+[data-platform="win"] .paragraph {
+  font-weight: 400;
+  letter-spacing: 0.03em;
+}
+
+[data-platform="win"] .app-title,
+[data-platform="win"] .db-title {
+  font-weight: 500;
+}
+
+[data-platform="win"] .pc-title {
+  font-weight: 600;
+}
+
+[data-platform="win"] .eh-title {
+  font-weight: 700;
+}
