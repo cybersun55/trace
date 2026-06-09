@@ -1522,36 +1522,48 @@ body {
 }
 
 /* ---- Windows 平台适配 ---- */
-/* Windows 的字体渲染（ClearType）比 macOS 更细更淡，需要提高对比度和字重 */
+/* Windows 的 ClearType 字体渲染比 macOS 更细更淡，需要大幅提高对比度 */
+
+:root[data-platform="win"], [data-platform="win"][data-theme="warm"] {
+  --bg-body: #eee8e0;
+  --bg-surface: #fffaee;
+  --text: #0f0f0f;
+  --text-secondary: #2a2218;
+  --text-muted: #4a4238;
+  --text-faint: #6c6256;
+  --text-faint-2: #80766a;
+}
 
 [data-platform="win"] body {
-  font-weight: 400;
+  font-weight: 450;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-[data-platform="win"] {
-  --text: #1a1a1a;
-  --text-secondary: #3a3228;
-  --text-muted: #6c6256;
-  --text-faint: #90887b;
-  --text-faint-2: #a0988b;
-}
-
 [data-platform="win"] .paragraph {
-  font-weight: 400;
-  letter-spacing: 0.03em;
+  font-weight: 450;
+  letter-spacing: 0.04em;
 }
 
 [data-platform="win"] .app-title,
-[data-platform="win"] .db-title {
-  font-weight: 500;
-}
-
-[data-platform="win"] .pc-title {
+[data-platform="win"] .db-title,
+[data-platform="win"] .db-subtitle {
   font-weight: 600;
 }
 
-[data-platform="win"] .eh-title {
+[data-platform="win"] .pc-title {
   font-weight: 700;
+}
+
+[data-platform="win"] .eh-title {
+  font-weight: 800;
+}
+
+[data-platform="win"] .app-statusbar {
+  font-weight: 500;
+}
+
+[data-platform="win"] .st-label,
+[data-platform="win"] .st-section-title {
+  font-weight: 600;
 }
