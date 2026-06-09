@@ -2,7 +2,7 @@
 
 > 鸟宿池边树，僧推月下门
 
-推敲（trace），一款**很奇怪**的浏览器端写作编辑器。相较于传统的编辑软件，在这个软件里删除的文字不会直接消失，而是会以以 ~~删除线~~ 的方式留存下来。
+推敲（trace），一款**很奇怪**的写作编辑器，支持浏览器（PWA）和桌面（Windows / macOS）。相较于传统的编辑软件，在这个软件里删除的文字不会直接消失，而是会以 ~~删除线~~ 的方式留存下来。
 
 人们在使用媒介的同时，媒介也在不断的重塑人们的思维。高中时语文老师总是批评我爱涂改，最后搞得卷面一团糟，我当时就犟嘴说**涂改也是内容的一部分**，后来在读了秦兰珺老师的《编码日常：大众软件批判》发觉真有一定道理，纸笔写下的文字和电脑写下的文字注定不一样。
 
@@ -46,6 +46,23 @@ npm run build
 ```bash
 npx serve dist
 ```
+
+### 桌面应用构建
+
+基于 [Tauri 2](https://tauri.app/) 打包为原生桌面应用：
+
+```bash
+# 安装 Tauri CLI
+cargo install tauri-cli
+
+# macOS 构建 (.dmg)
+cargo tauri build
+
+# Windows 交叉编译（需安装 mingw-w64）
+cargo tauri build --target x86_64-pc-windows-gnu
+```
+
+桌面版使用本地文件系统存储数据（`@tauri-apps/plugin-fs`），数据保存在系统应用数据目录下，不依赖浏览器。
 
 ### 运行测试
 
@@ -125,8 +142,8 @@ npm run test
 
 ### 数据安全
 
-- 使用浏览器 OPFS（Origin Private File System）存储，数据完全在本地
-- 无任何后端服务、无遥测、无数据收集
+- 浏览器端使用 OPFS（Origin Private File System）存储，桌面端使用系统本地文件系统
+- 数据完全在本地，无任何后端服务、无遥测、无数据收集
 - 支持 .tracebook 格式导入导出，方便备份迁移
 - 编辑时自动保存到 localStorage 作为崩溃恢复安全网
 
@@ -136,10 +153,10 @@ npm run test
 
 | 层 | 选型 | 说明 |
 |---|------|------|
-| 框架 | React 19 + TypeScript | 严格类型，无 `any` 逃逸 |
+| 框架 | React 19 + TypeScript + Tauri 2 | 严格类型，无 `any` 逃逸，跨平台桌面应用 |
 | 状态管理 | Zustand | 轻量，分 editorStore + projectStore |
 | 构建 | Vite | 秒级 HMR，生产构建 ~370KB gzip ~114KB |
-| 存储 | OPFS | 持久化文件系统，支持目录结构 |
+| 存储 | OPFS / Tauri FS | 浏览器用 OPFS，桌面端用本地文件系统 |
 | 编辑器 | contentEditable + beforeinput 拦截 | 无第三方编辑器依赖 |
 | PWA | Service Worker + Manifest | 离线缓存，可安装 |
 | 测试 | Vitest | 57 个测试，覆盖核心逻辑 |
@@ -190,6 +207,13 @@ src/
     ├── export.test.ts     # 导出功能测试
     └── storage/
         └── opfs.test.ts   # OPFS 存储层测试
+
+├── src-tauri/             # Tauri 桌面应用（Rust 端）
+│   ├── src/main.rs        # Rust 入口
+│   ├── tauri.conf.json    # Tauri 配置
+│   └── icons/             # 应用图标
+│
+└── public/                # 静态资源（PWA manifest、图标等）
 ```
 
 ### OPFS 存储结构
