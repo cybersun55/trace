@@ -12,57 +12,33 @@
 
 最后，此项目是vibe-coding的作品，注定有许多不足与漏洞，欢迎各位大佬批评指正，我们是真诚的。
 
-## 快速开始
+## 下载安装
 
-### 环境要求
+前往 [GitHub Releases](https://github.com/cybersun55/trace/releases) 下载最新版本：
 
-- Node.js 18+
-- npm 9+
+| 平台 | 文件 | 说明 |
+|------|------|------|
+| **macOS** | `推敲Trace_*.dmg` | Apple Silicon（M 系列芯片） |
+| **Windows** | `推敲Trace_*_x64-setup.exe` | 64 位 Windows 10+ |
 
-### 本地运行
+**浏览器版**（PWA）：访问 [cybersun55.github.io/trace](https://cybersun55.github.io/trace)，支持 Chrome / Edge 安装为桌面应用。
+
+> 浏览器版使用 OPFS 存储数据（隐私/无痕模式不可用），桌面版使用系统本地文件系统存储。
+
+### 从源码构建
 
 ```bash
-# 克隆仓库
 git clone https://github.com/cybersun55/trace.git
 cd trace
-
-# 安装依赖
 npm install
+npm run dev          # 浏览器开发
+npm run build        # 浏览器生产构建
 
-# 启动开发服务器
-npm run dev
-```
-
-浏览器打开 **http://localhost:5173** 即可使用。
-
-### 生产构建
-
-```bash
-npm run build
-```
-
-构建产物在 `dist/` 目录，将整个目录部署到任意静态服务器即可。例如本地快速预览：
-
-```bash
-npx serve dist
-```
-
-### 桌面应用构建
-
-基于 [Tauri 2](https://tauri.app/) 打包为原生桌面应用：
-
-```bash
-# 安装 Tauri CLI
+# 桌面应用需额外安装 Rust 和 Tauri CLI
 cargo install tauri-cli
-
-# macOS 构建 (.dmg)
-cargo tauri build
-
-# Windows 交叉编译（需安装 mingw-w64）
-cargo tauri build --target x86_64-pc-windows-gnu
+cargo tauri build    # macOS
+cargo tauri build --target x86_64-pc-windows-gnu  # Windows 交叉编译
 ```
-
-桌面版使用本地文件系统存储数据（`@tauri-apps/plugin-fs`），数据保存在系统应用数据目录下，不依赖浏览器。
 
 ### 运行测试
 
