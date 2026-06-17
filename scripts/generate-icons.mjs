@@ -10,7 +10,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.join(__dirname, '..');
 const outDir = path.join(__dirname, '..', 'public');
 const tauriIconDir = path.join(rootDir, 'src-tauri', 'icons');
-const sourcePath = path.join(outDir, 'icon-512.png');
+const sourcePath = path.join(outDir, 'icon-source.png');
 const iconsetDir = path.join(tauriIconDir, 'Trace.iconset');
 const run = promisify(execFile);
 
