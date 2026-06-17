@@ -10,7 +10,8 @@
     "dev": "vite",
     "build": "node scripts/generate-icons.mjs && vite build",
     "build:tauri": "node scripts/generate-icons.mjs && vite build --base=./",
-    "test": "vitest run"
+    "test": "vitest run",
+    "verify:icons": "node scripts/verify-icons-transparent.mjs"
   },
   "keywords": [],
   "author": "",
