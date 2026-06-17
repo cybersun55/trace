@@ -39,3 +39,4 @@ jobs:
           releaseBody: Windows installer for 推敲Trace.
           releaseDraft: false
           prerelease: false
+          args: --bundles nsis
