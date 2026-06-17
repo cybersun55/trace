@@ -83,6 +83,11 @@ async function writePngSet(baseDir, icons) {
 }
 
 async function writeIcns() {
+  if (process.platform !== 'darwin') {
+    console.log('  Skipped src-tauri/icons/icon.icns (requires macOS iconutil)');
+    return;
+  }
+
   await fs.rm(iconsetDir, { recursive: true, force: true });
   await fs.mkdir(iconsetDir, { recursive: true });
   await writePngSet(iconsetDir, iconsetIcons);
